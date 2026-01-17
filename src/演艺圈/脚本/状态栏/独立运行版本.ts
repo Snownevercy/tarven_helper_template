@@ -114,7 +114,7 @@ const waitUntil = async (condition: () => boolean, options?: { timeout?: number;
   const timeout = options?.timeout || 30000;
   const interval = options?.interval || 100;
   const startTime = Date.now();
-  
+
   while (Date.now() - startTime < timeout) {
     if (condition()) {
       return;
@@ -414,14 +414,14 @@ const renderModules = {
     const assets = getVal(sd, '个人账户.持有资产', {});
     const assetsList: string =
       typeof assets === 'object' && assets !== null
-        ? (Object.keys(assets)
+        ? Object.keys(assets)
             .map(key => {
               const item = assets[key];
               const count = typeof item === 'object' && item !== null && '数量' in item ? item.数量 : 0;
               return count > 0 ? `${key}×${count}` : null;
             })
             .filter(Boolean)
-            .join('、') || '无')
+            .join('、') || '无'
         : '无';
 
     const works = getVal(sd, '职业履历.作品名', []);
@@ -465,7 +465,7 @@ const renderModules = {
     const fixedCosts = getVal(sd, '公司账户.固定成本', {});
     const oneTimeChange = getVal(sd, '公司账户.公账一次性变动', 0);
     const runningProjects = getVal(sd, '公司账户.运行项目', {});
-    
+
     const fixedCostsList: string =
       typeof fixedCosts === 'object' && fixedCosts !== null
         ? Object.keys(fixedCosts)
@@ -482,7 +482,7 @@ const renderModules = {
 
     const projectsList: string =
       typeof runningProjects === 'object' && runningProjects !== null
-        ? (Object.keys(runningProjects)
+        ? Object.keys(runningProjects)
             .map(key => {
               const project = runningProjects[key];
               if (typeof project === 'object' && project !== null) {
@@ -511,7 +511,7 @@ const renderModules = {
               return null;
             })
             .filter(Boolean)
-            .join('') || '<div style="font-size:10px; color:#555; padding:4px;">暂无运行项目</div>')
+            .join('') || '<div style="font-size:10px; color:#555; padding:4px;">暂无运行项目</div>'
         : '<div style="font-size:10px; color:#555; padding:4px;">暂无运行项目</div>';
 
     return `
@@ -630,7 +630,7 @@ const renderModules = {
 function initFatePhone() {
   $('head').append(fateStyles);
   $('body').prepend(fateTemplate);
-  
+
   const modalHtml = `
     <div id="project-modal" class="modal-overlay">
       <div class="modal-content">
@@ -659,7 +659,7 @@ function initFatePhone() {
     </div>
   `;
   $('body').append(modalHtml);
-  
+
   const container = $('#fate-phone-container');
   const content = $('#fp-content');
 
@@ -726,11 +726,11 @@ function initFatePhone() {
   const openProjectModal = (projectName?: string) => {
     const modal = $('#project-modal');
     const isEdit = !!projectName;
-    
+
     $('#modal-title').text(isEdit ? '编辑运行项目' : '新增运行项目');
     $('#modal-project-name').val(projectName || '');
     $('#modal-project-name').prop('disabled', isEdit);
-    
+
     if (isEdit) {
       try {
         const variables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
@@ -752,7 +752,7 @@ function initFatePhone() {
       $('#modal-price').val('');
       $('#modal-cost-rate').val('0.5');
     }
-    
+
     modal.addClass('show');
   };
 
@@ -770,7 +770,7 @@ function initFatePhone() {
     const monthlySales = parseFloat(String($('#modal-monthly-sales').val() || '0'));
     const price = parseFloat(String($('#modal-price').val() || '0'));
     const costRate = parseFloat(String($('#modal-cost-rate').val() || '0.5'));
-    
+
     if (isNaN(monthlySales) || isNaN(price) || isNaN(costRate)) {
       toastr.warning('请输入有效的数值');
       return;
@@ -784,7 +784,7 @@ function initFatePhone() {
     try {
       const variables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
       const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
-      
+
       if (!stat_data.公司账户) {
         stat_data.公司账户 = {
           运行项目: {},
@@ -808,7 +808,7 @@ function initFatePhone() {
 
       _.set(variables, 'stat_data', stat_data);
       await window.Mvu!.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
-      
+
       closeProjectModal();
       render();
       toastr.success('保存成功');
@@ -826,12 +826,12 @@ function initFatePhone() {
     try {
       const variables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
       const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
-      
+
       if (stat_data.公司账户?.运行项目 && projectName in stat_data.公司账户.运行项目) {
         delete stat_data.公司账户.运行项目[projectName];
         _.set(variables, 'stat_data', stat_data);
         await window.Mvu!.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
-        
+
         render();
         toastr.success('删除成功');
       }
@@ -845,7 +845,7 @@ function initFatePhone() {
     try {
       const currentVariables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
       const currentStatData = Schema.parse(_.get(currentVariables, 'stat_data', {}));
-      
+
       let oldVariables;
       try {
         oldVariables = window.Mvu!.getMvuData({ type: 'message', message_id: -2 });
@@ -861,12 +861,7 @@ function initFatePhone() {
       const oldFixedCosts = _.get(oldStatData, '公司账户.固定成本', {});
       const oldRunningProjects = _.get(oldStatData, '公司账户.运行项目', {});
 
-      if (
-        oldCurrentDate &&
-        newCurrentDate &&
-        oldCurrentDate !== '待定' &&
-        newCurrentDate !== '待定'
-      ) {
+      if (oldCurrentDate && newCurrentDate && oldCurrentDate !== '待定' && newCurrentDate !== '待定') {
         const monthCrossing = calculateMonthCrossing(oldCurrentDate, newCurrentDate);
         const calculatedCash = calculateCompanyCash(
           oldCompanyCash,
@@ -883,7 +878,7 @@ function initFatePhone() {
         const humanCost = Number(_.get(oldFixedCosts, '人力成本')) || 0;
         const rentCost = Number(_.get(oldFixedCosts, '房租')) || 0;
         const totalFixedCost = humanCost + rentCost;
-        
+
         let totalMonthlyProfit = 0;
         if (oldRunningProjects && typeof oldRunningProjects === 'object') {
           for (const project_name in oldRunningProjects) {
@@ -899,7 +894,7 @@ function initFatePhone() {
           message += `\n跨月数: ${monthCrossing}\n固定成本: ¥${totalFixedCost.toLocaleString()}/月\n月毛利总和: ¥${totalMonthlyProfit.toLocaleString()}/月`;
         }
         toastr.success(message, '重算现金', { timeOut: 5000 });
-        
+
         render();
       } else {
         const currentCash = _.get(currentStatData, '公司账户._现金', 0);
@@ -907,8 +902,12 @@ function initFatePhone() {
         _.set(currentStatData, '公司账户._现金', newCash);
         _.set(currentVariables, 'stat_data', currentStatData);
         await window.Mvu!.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
-        
-        toastr.success(`现金重算完成！\n当前现金: ¥${currentCash.toLocaleString()}\n一次性变动: ${oneTimeChange >= 0 ? '+' : ''}¥${oneTimeChange.toLocaleString()}\n新现金: ¥${newCash.toLocaleString()}`, '重算现金', { timeOut: 5000 });
+
+        toastr.success(
+          `现金重算完成！\n当前现金: ¥${currentCash.toLocaleString()}\n一次性变动: ${oneTimeChange >= 0 ? '+' : ''}¥${oneTimeChange.toLocaleString()}\n新现金: ¥${newCash.toLocaleString()}`,
+          '重算现金',
+          { timeOut: 5000 },
+        );
         render();
       }
     } catch (e) {
