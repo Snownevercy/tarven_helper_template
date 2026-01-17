@@ -1,0 +1,7 @@
+{
+  "id": "保护只读字段-本地开发",
+  "name": "保护只读字段-本地开发",
+  "content": "import 'http://localhost:5500/dist/演艺圈/脚本/保护只读字段/index.js'",
+  "info": "用于本地开发的脚本导入配置。需要先运行 pnpm watch 启动本地开发服务器。",
+  "buttons": []
+}

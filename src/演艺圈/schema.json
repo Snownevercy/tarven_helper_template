@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "世界": {
+      "type": "object",
+      "properties": {
+        "当前日期": {
+          "default": "待定",
+          "type": "string"
+        },
+        "当前地点": {
+          "default": "待定",
+          "type": "string"
+        },
+        "时代新闻": {
+          "default": "待定",
+          "type": "string"
+        },
+        "行业新闻": {
+          "default": "待定",
+          "type": "string"
+        },
+        "八卦新闻": {
+          "default": "待定",
+          "type": "string"
+        }
+      }
+    },
+    "主角": {
+      "type": "object",
+      "properties": {
+        "姓名": {
+          "default": "待定",
+          "type": "string"
+        },
+        "性别": {
+          "default": "待定",
+          "type": "string"
+        },
+        "国籍": {
+          "default": "待定",
+          "type": "string"
+        },
+        "生日": {
+          "default": "待定",
+          "type": "string"
+        },
+        "_年龄": {
+          "type": "number"
+        },
+        "外貌": {
+          "default": "待定",
+          "type": "string"
+        },
+        "职业": {
+          "default": "待定",
+          "type": "string"
+        },
+        "性癖": {
+          "default": "无",
+          "type": "string"
+        },
+        "配偶": {
+          "default": "无",
+          "type": "string"
+        },
+        "子女": {
+          "default": "无",
+          "type": "string"
+        },
+        "情人": {
+          "default": "无",
+          "type": "string"
+        }
+      }
+    },
+    "职业履历": {
+      "type": "object",
+      "properties": {
+        "作品名": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "获取奖项": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "专业评估": {
+      "type": "object",
+      "properties": {
+        "当前咖位": {
+          "default": "无",
+          "type": "string"
+        },
+        "业务能力": {
+          "default": "无",
+          "type": "string"
+        },
+        "媒体风向": {
+          "default": "无",
+          "type": "string"
+        },
+        "社会风评": {
+          "default": "无",
+          "type": "string"
+        },
+        "粉丝基础": {
+          "default": "无",
+          "type": "string"
+        }
+      }
+    },
+    "个人账户": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "现金": {
+          "type": "number"
+        },
+        "合约状态": {
+          "default": "无",
+          "type": "string"
+        },
+        "持有资产": {
+          "description": "Key:资产名称",
+          "default": {},
+          "$ref": "#/$defs/__schema0"
+        }
+      }
+    },
+    "公司账户": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "运行项目": {
+          "description": "公司正在运营的业务线/产品线，用于计算经营性收入",
+          "default": {},
+          "$ref": "#/$defs/__schema1"
+        },
+        "固定成本": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "人力成本": {
+              "type": "number"
+            },
+            "房租": {
+              "type": "number"
+            }
+          }
+        },
+        "公账一次性变动": {
+          "description": "非经营性资金流动，主营业务收入不计入（正数=收入，负数=支出）",
+          "$ref": "#/$defs/__schema5"
+        },
+        "_现金": {
+          "type": "number"
+        }
+      }
+    },
+    "人脉": {
+      "type": "object",
+      "properties": {
+        "社交版图": {
+          "default": [
+            "无"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "近期互动": {
+          "default": [
+            "无"
+          ],
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema6"
+          },
+          "description": "最近有过关键交互的人"
+        },
+        "关系簿": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "蝴蝶效应": {
+      "type": "object",
+      "properties": {
+        "已抹除列表": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "description": "原作者"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "世界",
+    "主角",
+    "职业履历",
+    "专业评估",
+    "人脉",
+    "蝴蝶效应"
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "数量": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "__schema1": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "业务线名称"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "月销量": {
+            "description": "月销量/月活",
+            "$ref": "#/$defs/__schema2"
+          },
+          "单价": {
+            "description": "单价/ARPU",
+            "$ref": "#/$defs/__schema3"
+          },
+          "边际成本率": {
+            "default": 0.5,
+            "type": "number"
+          },
+          "_月毛利": {
+            "description": "由脚本计算：月销量 * 单价 * (1 - 边际成本率)",
+            "$ref": "#/$defs/__schema4"
+          }
+        }
+      }
+    },
+    "__schema2": {
+      "type": "number"
+    },
+    "__schema3": {
+      "type": "number"
+    },
+    "__schema4": {
+      "type": "number"
+    },
+    "__schema5": {
+      "type": "number"
+    },
+    "__schema6": {
+      "type": "string"
+    }
+  }
+}

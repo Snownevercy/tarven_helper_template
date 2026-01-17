@@ -1,0 +1,37 @@
+---
+变量输出格式:
+  rule:
+    - you must output the update analysis and the actual update commands at once in the end of the next reply
+    - the update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:
+      - replace: replace the value of existing paths
+      - delta: update the value of existing number paths by a delta value
+      - insert: insert new items into an object or array
+      - remove
+    - **CRITICAL: don't update field names starts with `_` as they are readonly, such as `_变量`**
+    - **CRITICAL: The following fields are readonly and must NEVER be updated:**
+      - `主角._年龄` (calculated by script from birthday and current date)
+      - `公司账户._现金` (calculated by script from fixed costs, running projects, and one-time changes)
+      - `公司账户.运行项目.${项目名}._月毛利` (calculated by script from 月销量, 单价, and 边际成本率)
+    - If you attempt to update these readonly fields, your update command will be automatically rejected and the old value will be restored
+    - **CRITICAL: 运行项目的添加规则:**
+      - **仅在业务正式启动时添加**：如专辑正式发售、APP正式上线、店铺正式开业等。筹备中、研发中的项目不应添加到运行项目。
+      - **必须包含的字段**：`月销量` (number), `单价` (number), `边际成本率` (number, 0.0~1.0)
+      - **严禁添加其他字段**：如进度、预算、状态等不符合schema的字段将被拒绝
+      - **筹备中的项目**：如果必须添加（特殊情况），月销量=0, 单价=0, 边际成本率根据行业设置
+  format: |-
+    <UpdateVariable>
+    <Analysis>$(IN ENGLISH, no more than 80 words)
+    - ${calculate time passed: ...}
+    - ${decide whether dramatic updates are allowed as it's in a special case or the time passed is more than usual: yes/no}
+    - ${analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots: ...}
+    </Analysis>
+    <JSONPatch>
+    [
+      { "op": "replace", "path": "${/path/to/variable}", "value": "${new_value}" },
+      { "op": "delta", "path": "${/path/to/number/variable}", "value": "${positve_or_negative_delta}" },
+      { "op": "insert", "path": "${/path/to/object/new_key}", "value": "${new_value}" },
+      { "op": "remove", "path": "${/path/to/array/0}" },
+      ...
+    ]
+    </JSONPatch>
+    </UpdateVariable>
