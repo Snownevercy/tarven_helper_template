@@ -1,8 +1,17 @@
+<<<<<<< HEAD
+=======
+import { StoreDefinition } from 'pinia';
+
+>>>>>>> 144270117e5c2d7250e461da58e402f15c661485
 export function defineMvuDataStore<T extends z.ZodObject>(
   schema: T,
   variable_option: VariableOption,
   additional_setup?: (data: Ref<z.infer<T>>) => void,
+<<<<<<< HEAD
 ): ReturnType<typeof defineStore> {
+=======
+): StoreDefinition<`mvu_data.${string}`, { data: Ref<z.infer<T>> }> {
+>>>>>>> 144270117e5c2d7250e461da58e402f15c661485
   if (
     variable_option.type === 'message' &&
     (variable_option.message_id === undefined || variable_option.message_id === 'latest')
