@@ -628,7 +628,7 @@ function initFatePhone() {
   const handleClockClick = (e: JQuery.Event) => {
     e.stopPropagation();
     e.preventDefault();
-    
+
     // 防抖处理，避免快速多次点击
     if (clockClickTimer) {
       clearTimeout(clockClickTimer);
@@ -640,7 +640,7 @@ function initFatePhone() {
       clockClickTimer = null;
     }, 150);
   };
-  
+
   container.on('click', '#fp-clock', handleClockClick);
   // 阻止触摸事件触发拖拽逻辑
   container.on('touchstart', '#fp-clock', function (e) {
