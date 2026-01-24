@@ -1,0 +1,7 @@
+{
+  "id": "状态栏-GitHub自动更新",
+  "name": "状态栏-GitHub自动更新",
+  "content": "import 'https://testingcf.jsdelivr.net/gh/Snownevercy/tarven_helper_template@latest/dist/演艺圈/脚本/状态栏/index.js'",
+  "info": "使用 GitHub + jsdelivr 实现自动更新的脚本导入配置。每次 push 代码到 GitHub 后，会自动打包并更新。",
+  "buttons": []
+}

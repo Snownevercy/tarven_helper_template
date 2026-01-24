@@ -1,0 +1,7 @@
+{
+  "id": "状态栏-本地开发",
+  "name": "状态栏-本地开发",
+  "content": "import 'http://localhost:5500/dist/演艺圈/脚本/状态栏/index.js'",
+  "info": "用于本地开发的状态栏脚本导入配置。需要先运行 pnpm watch 启动本地开发服务器。",
+  "buttons": []
+}

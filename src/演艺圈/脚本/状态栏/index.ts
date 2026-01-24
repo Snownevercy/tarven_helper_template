@@ -623,11 +623,33 @@ function initFatePhone() {
     else audio.pause();
   });
 
-  container.on('click', '#fp-clock', function (e) {
+  // 时间按钮点击处理（支持触摸和鼠标）
+  let clockClickTimer: NodeJS.Timeout | null = null;
+  const handleClockClick = (e: JQuery.Event) => {
     e.stopPropagation();
-    fateState.posIndex = (fateState.posIndex + 1) % POSITIONS.length;
-    localStorage.setItem(window.FATE_CONFIG.storagePosIndex, String(fateState.posIndex));
-    applyPosition();
+    e.preventDefault();
+    
+    // 防抖处理，避免快速多次点击
+    if (clockClickTimer) {
+      clearTimeout(clockClickTimer);
+    }
+    clockClickTimer = setTimeout(() => {
+      fateState.posIndex = (fateState.posIndex + 1) % POSITIONS.length;
+      localStorage.setItem(window.FATE_CONFIG.storagePosIndex, String(fateState.posIndex));
+      applyPosition();
+      clockClickTimer = null;
+    }, 150);
+  };
+  
+  container.on('click', '#fp-clock', handleClockClick);
+  // 阻止触摸事件触发拖拽逻辑
+  container.on('touchstart', '#fp-clock', function (e) {
+    e.stopPropagation();
+  });
+  container.on('touchend', '#fp-clock', function (e) {
+    e.stopPropagation();
+    // 触摸结束时也触发位置切换
+    handleClockClick(e);
   });
 
   // 项目编辑相关函数
