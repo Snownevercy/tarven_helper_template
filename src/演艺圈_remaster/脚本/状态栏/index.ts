@@ -1,6 +1,17 @@
 import { waitUntil } from 'async-wait-until';
 import { Schema } from '../../schema';
 
+// 扩展 Window 接口以支持自定义属性
+declare global {
+  interface Window {
+    FATE_CONFIG?: {
+      storagePosIndex: string;
+      storageCollapse: string;
+      storageTab: string;
+    };
+  }
+}
+
 /**
  * 解析日期字符串，提取 YYYY-MM-DD 部分
  * 支持格式：YYYY-MM-DD 周X HH:mm 或 YYYY-MM-DD
@@ -216,11 +227,11 @@ const POSITIONS = [
   { name: 'TR', css: { top: '60px', right: '10px', bottom: 'auto', left: 'auto' } },
 ];
 
-const fateState = {
-  currentTab: localStorage.getItem(window.FATE_CONFIG.storageTab) || 'home',
-  isCollapsed: localStorage.getItem(window.FATE_CONFIG.storageCollapse) === 'true',
+  const fateState = {
+  currentTab: localStorage.getItem(window.FATE_CONFIG?.storageTab || '') || 'home',
+  isCollapsed: localStorage.getItem(window.FATE_CONFIG?.storageCollapse || '') === 'true',
   // 确保位置索引在有效范围内（只有上方两个位置）
-  posIndex: Math.min(parseInt(localStorage.getItem(window.FATE_CONFIG.storagePosIndex)) || 0, POSITIONS.length - 1),
+  posIndex: Math.min(parseInt(localStorage.getItem(window.FATE_CONFIG?.storagePosIndex || '') || '0') || 0, POSITIONS.length - 1),
 };
 
 const fateStyles = `
@@ -331,330 +342,8 @@ const fateTemplate = `
 
 function getMvuDataSafe() {
   try {
-    if (window.Mvu && typeof window.Mvu.getMvuData === 'function') {
-      const variables = window.Mvu.getMvuData({ type: 'message', message_id: 'latest' });
-      if (variables && variables.stat_data) {
-        return Schema.parse(variables.stat_data);
-      }
-    }
-  } catch (e) {
-    console.warn('获取 MVU 数据失败:', e);
-  }
-  return Schema.parse({});
-}
-
-const getVal = (data: z.infer<typeof Schema>, path: string, def: any = '无') => {
-  if (!data) return def;
-  let current: any = data;
-  try {
-    const keys = path.split('.');
-    for (const key of keys) {
-      if (current === undefined || current === null) return def;
-      current = current[key];
-    }
-    return current !== undefined && current !== null && current !== '' ? current : def;
-  } catch (e) {
-    return def;
-  }
-};
-
-const renderModules = {
- * 解析日期字符串，提取 YYYY-MM-DD 部分
- * 支持格式：YYYY-MM-DD 周X HH:mm 或 YYYY-MM-DD
- */
-function parseDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr === '待定') {
-    return null;
-  }
-  // 提取 YYYY-MM-DD 部分（可能包含时间）
-  const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) {
-    return null;
-  }
-  const year = parseInt(match[1], 10);
-  const month = parseInt(match[2], 10) - 1; // JavaScript Date 月份从 0 开始
-  const day = parseInt(match[3], 10);
-  return new Date(year, month, day);
-}
-
-/**
- * 计算跨月数：从上一轮日期到本轮日期，经过了多少个"1日"节点
- * 例如：2002-07-15 到 2002-09-15，跨了2个月（经过8月1日和9月1日）
- * 跨越节点定为每月的1日
- */
-function calculateMonthCrossing(oldDateStr: string, newDateStr: string): number {
-  const oldDate = parseDate(oldDateStr);
-  const newDate = parseDate(newDateStr);
-
-  if (!oldDate || !newDate) {
-    return 0;
-  }
-
-  // 如果新日期早于或等于旧日期，返回0
-  if (newDate <= oldDate) {
-    return 0;
-  }
-
-  // 获取旧日期的年月日
-  const oldYear = oldDate.getFullYear();
-  const oldMonth = oldDate.getMonth(); // 0-11
-  const oldDay = oldDate.getDate();
-
-  // 获取新日期的年月日
-  const newYear = newDate.getFullYear();
-  const newMonth = newDate.getMonth();
-
-  // 计算从旧日期之后的下一个"1日"开始，到新日期之间经过了多少个"1日"
-  let currentYear = oldYear;
-  let currentMonth = oldMonth;
-
-  // 如果旧日期不是1日，从下个月的1日开始计算
-  // 下个月的1日本身就是一个跨月节点，应该被计算在内
-  if (oldDay > 1) {
-    currentMonth++;
-    if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
-    }
-  }
-
-  let monthCount = 0;
-
-  // 从下一个"1日"开始，逐月检查是否经过了"1日"节点
-  while (true) {
-    // 检查当前月份是否在新日期之前或等于新日期所在月份
-    if (currentYear > newYear || (currentYear === newYear && currentMonth > newMonth)) {
-      break;
-    }
-
-    // 如果当前月份等于新日期所在月份
-    if (currentYear === newYear && currentMonth === newMonth) {
-      // 如果新日期是1日，算跨月；如果新日期不是1日，但当前月份是经过的"1日"节点，也算跨月
-      // 因为从旧日期到新日期，经过了当前月份的1日这个节点
-      monthCount++;
-      break;
-    }
-
-    // 经过了一个"1日"节点
-    monthCount++;
-
-    // 移动到下一个月
-    currentMonth++;
-    if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
-    }
-  }
-
-  return monthCount;
-}
-
-/**
- * 计算公司账户现金
- * 跨月数为0：_现金 = 上一轮_现金 + 最新公账一次性变动
- * 跨月数>=1：_现金 = 上一轮_现金 + 最新公账一次性变动 - 固定成本(上一轮) * 跨月数 + 所有运行项目月毛利(上一轮) * 跨月数
- */
-function calculateCompanyCash(
-  oldCash: number,
-  oneTimeChange: number,
-  monthCrossing: number,
-  oldFixedCosts: any,
-  oldRunningProjects: any,
-): number {
-  let cash = Number(oldCash) || 0;
-  const change = Number(oneTimeChange) || 0;
-
-  // 加上一次性变动
-  cash += change;
-
-  // 如果跨月，需要扣除固定成本，加上运行项目的月毛利
-  if (monthCrossing >= 1) {
-    // 计算固定成本（人力成本 + 场地成本 + 营销预算 + 其他运营）
-    const humanCost = Number(_.get(oldFixedCosts, '人力成本')) || 0;
-    const placeCost = Number(_.get(oldFixedCosts, '场地成本')) || 0;
-    const marketingBudget = Number(_.get(oldFixedCosts, '营销预算')) || 0;
-    const otherOps = Number(_.get(oldFixedCosts, '其他运营')) || 0;
-    const totalFixedCost = humanCost + placeCost + marketingBudget + otherOps;
-
-    // 计算所有运行项目的月毛利总和
-    let totalMonthlyProfit = 0;
-    if (oldRunningProjects && typeof oldRunningProjects === 'object') {
-      for (const project_name in oldRunningProjects) {
-        const project = oldRunningProjects[project_name];
-        if (project && typeof project === 'object' && '_月毛利' in project) {
-          const monthlyProfit = Number(project._月毛利) || 0;
-          totalMonthlyProfit += monthlyProfit;
-        }
-      }
-    }
-
-    // 扣除固定成本，加上月毛利（乘以跨月数）
-    cash -= totalFixedCost * monthCrossing;
-    cash += totalMonthlyProfit * monthCrossing;
-  }
-
-  return cash;
-}
-
-/**
- * 计算个人账户现金
- * 跨月数为0：_现金 = 上一轮_现金 + 最新私账一次性变动
- * 跨月数>=1：_现金 = 上一轮_现金 + 最新私账一次性变动 + (月度固定收入 - 月度固定支出) * 跨月数
- */
-function calculatePersonalCash(
-  oldCash: number,
-  oneTimeChange: number,
-  monthCrossing: number,
-  monthlyIncome: number,
-  monthlyExpense: number,
-): number {
-  let cash = Number(oldCash) || 0;
-  const change = Number(oneTimeChange) || 0;
-
-  // 加上一次性变动
-  cash += change;
-
-  // 如果跨月，需要加上月度净收入
-  if (monthCrossing >= 1) {
-    const monthlyNet = (Number(monthlyIncome) || 0) - (Number(monthlyExpense) || 0);
-    cash += monthlyNet * monthCrossing;
-  }
-
-  return cash;
-}
-
-$('#fate-phone-container, #fate-phone-css').remove();
-$(document).off('.fatephone');
-
-window.FATE_CONFIG = {
-  storagePosIndex: 'fate_phone_pos_index_v9',
-  storageCollapse: 'fate_phone_collapsed',
-  storageTab: 'fate_phone_tab',
-};
-
-// 只保留上方两个位置（左上和右上）
-const POSITIONS = [
-  { name: 'TL', css: { top: '60px', left: '10px', bottom: 'auto', right: 'auto' } },
-  { name: 'TR', css: { top: '60px', right: '10px', bottom: 'auto', left: 'auto' } },
-];
-
-const fateState = {
-  currentTab: localStorage.getItem(window.FATE_CONFIG.storageTab) || 'home',
-  isCollapsed: localStorage.getItem(window.FATE_CONFIG.storageCollapse) === 'true',
-  // 确保位置索引在有效范围内（只有上方两个位置）
-  posIndex: Math.min(parseInt(localStorage.getItem(window.FATE_CONFIG.storagePosIndex)) || 0, POSITIONS.length - 1),
-};
-
-const fateStyles = `
-<style id="fate-phone-css">
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
-    #fate-phone-container {
-        --phone-w: 95vw;
-        --max-w: 350px;
-        --phone-h: 80vh;
-        --max-h: 680px;
-        --bezel: 12px; --radius: 24px;
-        --c-frame: #111; --c-bg: #050505; --c-card: rgba(255,255,255,0.08); --c-text: #eee; --c-sub: #888;
-
-        position: fixed;
-        width: var(--phone-w); max-width: var(--max-w);
-        height: var(--phone-h); max-height: var(--max-h);
-
-        background: var(--c-frame); border-radius: var(--radius);
-        box-shadow: 0 0 0 2px #000, 0 0 0 4px #333, 0 20px 50px rgba(0,0,0,0.6);
-        z-index: 500; font-family: 'Noto Sans SC', sans-serif; color: var(--c-text);
-        user-select: none; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }
-    #fate-phone-container.collapsed {
-        width: 50px; height: 50px;
-        border-radius: 14px; border: 2px solid #555;
-        min-width: 0; min-height: 0;
-        overflow: hidden;
-    }
-    .icon-placeholder { display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; background: #000; }
-    #fate-phone-container.collapsed .icon-placeholder { display: flex; }
-    #fate-phone-container.collapsed .screen-area { display: none; }
-    .screen-area { position: absolute; top: var(--bezel); left: var(--bezel); right: var(--bezel); bottom: var(--bezel); background: linear-gradient(170deg, #1a1a1a 0%, #000 100%); border-radius: calc(var(--radius) - 4px); overflow: hidden; display: flex; flex-direction: column; pointer-events: auto; }
-    .status-bar { height: 24px; min-height: 24px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 10px; z-index: 20; background: rgba(0,0,0,0.3); }
-    #fp-clock { cursor: pointer; font-weight: 700; color: #ddd; opacity: 0.8; transition: 0.2s; }
-    #fp-clock:hover { opacity: 1; color: #fff; }
-    .header-info { padding: 8px 15px 10px 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); }
-    .main-title { font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 2px; letter-spacing: 1px; }
-    .sub-quote { font-size: 9px; color: #666; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7; }
-    .scroll-content { flex: 1; overflow-y: auto; padding: 10px; scrollbar-width: none; cursor: grab; -webkit-overflow-scrolling: touch; }
-    .scroll-content.grabbing { cursor: grabbing; }
-    .scroll-content::-webkit-scrollbar { display: none; }
-    .nav-bar { height: 50px; min-height: 50px; background: rgba(15,15,15,0.98); border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-around; align-items: center; padding-bottom: 2px; }
-    .nav-item { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; color: #444; cursor: pointer; transition: 0.2s; }
-    .nav-item:hover { color: #888; background: rgba(255,255,255,0.02); }
-    .nav-item.active { color: #ddd; font-weight: 700; }
-    .nav-icon { font-size: 16px; margin-bottom: 2px; filter: grayscale(1); opacity: 0.5; transition: 0.2s; }
-    .nav-item.active .nav-icon { filter: grayscale(0); opacity: 1; }
-    .card { background: var(--c-card); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-    .card-title { font-size: 9px; color: #666; text-transform: uppercase; margin-bottom: 6px; font-weight: 700; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
-    .card-title::before { content:''; display:block; width:3px; height:8px; background:#444; }
-    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 11px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .info-row:last-child { border-bottom: none; }
-    .info-key { color: #888; }
-    .info-val { color: #eee; font-weight: 500; text-align: right; }
-    .info-block { margin-top: 6px; padding: 6px; background: rgba(0,0,0,0.3); border-radius: 6px; font-size: 11px; color: #ccc; line-height: 1.4; }
-    .btn-icon { cursor: pointer; padding: 4px; opacity: 0.6; transition: 0.2s; font-size: 12px; }
-    .btn-icon:hover { opacity: 1; }
-    .list-item { padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11px; display: flex; justify-content: space-between; }
-    .list-item:last-child { border-bottom: none; }
-    .hl-val { color: #fff; font-weight: 600; }
-    .dim-val { color: #666; font-size: 10px; }
-    .project-actions { display: flex; gap: 6px; align-items: center; }
-    .btn-small { cursor: pointer; padding: 2px 6px; font-size: 9px; background: rgba(255,255,255,0.1); border-radius: 4px; transition: 0.2s; }
-    .btn-small:hover { background: rgba(255,255,255,0.2); }
-    .btn-add { cursor: pointer; padding: 6px 12px; font-size: 10px; background: rgba(74,169,74,0.3); border-radius: 6px; text-align: center; margin-top: 8px; transition: 0.2s; }
-    .btn-add:hover { background: rgba(74,169,74,0.5); }
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; display: none; align-items: center; justify-content: center; }
-    .modal-overlay.show { display: flex; }
-    .modal-content { background: #1a1a1a; border-radius: 12px; padding: 20px; max-width: 400px; width: 90%; border: 1px solid rgba(255,255,255,0.1); }
-    .modal-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 15px; }
-    .form-group { margin-bottom: 12px; }
-    .form-label { font-size: 10px; color: #888; margin-bottom: 4px; display: block; }
-    .form-input { width: 100%; padding: 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 11px; box-sizing: border-box; }
-    .form-input:focus { outline: none; border-color: rgba(74,169,74,0.5); }
-    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px; }
-    .btn-modal { padding: 8px 16px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: 0.2s; border: none; }
-    .btn-modal-primary { background: rgba(74,169,74,0.5); color: #fff; }
-    .btn-modal-primary:hover { background: rgba(74,169,74,0.7); }
-    .btn-modal-secondary { background: rgba(255,255,255,0.1); color: #ccc; }
-    .btn-modal-secondary:hover { background: rgba(255,255,255,0.2); }
-</style>
-`;
-
-const fateTemplate = `
-<div id="fate-phone-container">
-    <div class="icon-placeholder">📱</div>
-    <div class="screen-area">
-        <div class="status-bar">
-            <span id="fp-clock">12:00</span>
-            <div style="display:flex; gap:10px;">
-                <div id="btn-collapse" class="btn-icon">▼</div>
-            </div>
-        </div>
-        <div class="header-info">
-            <div id="fp-title" class="main-title">逐梦演艺圈</div>
-            <div id="fp-quote" class="sub-quote">...</div>
-        </div>
-        <div id="fp-content" class="scroll-content"></div>
-        <div class="nav-bar">
-            <div class="nav-item" data-tab="home"><div class="nav-icon">👤</div><div>档案</div></div>
-            <div class="nav-item" data-tab="business"><div class="nav-icon">💼</div><div>商业</div></div>
-            <div class="nav-item" data-tab="social"><div class="nav-icon">🕸️</div><div>人脉</div></div>
-            <div class="nav-item" data-tab="world"><div class="nav-icon">👁️</div><div>情报</div></div>
-        </div>
-    </div>
-</div>
-`;
-
-function getMvuDataSafe() {
-  try {
-    if (window.Mvu && typeof window.Mvu.getMvuData === 'function') {
-      const variables = window.Mvu.getMvuData({ type: 'message', message_id: 'latest' });
+    if (typeof Mvu !== 'undefined' && typeof Mvu.getMvuData === 'function') {
+      const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
       if (variables && variables.stat_data) {
         return Schema.parse(variables.stat_data);
       }
@@ -1033,20 +722,20 @@ function initFatePhone() {
   container.on('click', '.nav-item', function (e) {
     e.stopPropagation();
     fateState.currentTab = $(this).data('tab');
-    localStorage.setItem(window.FATE_CONFIG.storageTab, fateState.currentTab);
+    localStorage.setItem(window.FATE_CONFIG?.storageTab || '', fateState.currentTab);
     render();
   });
 
   const toggleCollapse = (e: JQuery.Event) => {
     e.stopPropagation();
     fateState.isCollapsed = !fateState.isCollapsed;
-    localStorage.setItem(window.FATE_CONFIG.storageCollapse, String(fateState.isCollapsed));
+    localStorage.setItem(window.FATE_CONFIG?.storageCollapse || '', String(fateState.isCollapsed));
     render();
   };
   container.on('click', '#btn-collapse, .icon-placeholder', toggleCollapse);
 
   // 时间按钮点击处理（支持触摸和鼠标）
-  let clockClickTimer: NodeJS.Timeout | null = null;
+  let clockClickTimer: ReturnType<typeof setTimeout> | null = null;
   const handleClockClick = (e: JQuery.Event) => {
     e.stopPropagation();
     e.preventDefault();
@@ -1057,7 +746,7 @@ function initFatePhone() {
     }
     clockClickTimer = setTimeout(() => {
       fateState.posIndex = (fateState.posIndex + 1) % POSITIONS.length;
-      localStorage.setItem(window.FATE_CONFIG.storagePosIndex, String(fateState.posIndex));
+      localStorage.setItem(window.FATE_CONFIG?.storagePosIndex || '', String(fateState.posIndex));
       applyPosition();
       clockClickTimer = null;
     }, 150);
@@ -1085,7 +774,7 @@ function initFatePhone() {
 
     if (isEdit) {
       try {
-        const variables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
+        const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
         const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
         const projects = stat_data.公司账户?.运行项目;
         if (projects && typeof projects === 'object' && projectName) {
@@ -1136,7 +825,7 @@ function initFatePhone() {
     }
 
     try {
-      const variables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
+      const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
       const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
 
       if (!stat_data.公司账户) {
@@ -1162,7 +851,7 @@ function initFatePhone() {
       };
 
       _.set(variables, 'stat_data', stat_data);
-      await window.Mvu!.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
+      await Mvu.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
 
       closeProjectModal();
       render();
@@ -1179,13 +868,13 @@ function initFatePhone() {
     }
 
     try {
-      const variables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
+      const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
       const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
 
       if (stat_data.公司账户?.运行项目 && projectName in stat_data.公司账户.运行项目) {
         delete stat_data.公司账户.运行项目[projectName];
         _.set(variables, 'stat_data', stat_data);
-        await window.Mvu!.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
+        await Mvu.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
 
         render();
         toastr.success('删除成功');
@@ -1200,13 +889,13 @@ function initFatePhone() {
   const recalculateCash = async () => {
     try {
       // 获取当前楼层的变量（最新）
-      const currentVariables = window.Mvu!.getMvuData({ type: 'message', message_id: 'latest' });
+      const currentVariables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
       const currentStatData = Schema.parse(_.get(currentVariables, 'stat_data', {}));
 
       // 获取上一楼层的变量（倒数第二楼）
       let oldVariables;
       try {
-        oldVariables = window.Mvu!.getMvuData({ type: 'message', message_id: -2 });
+        oldVariables = Mvu.getMvuData({ type: 'message', message_id: -2 });
       } catch (e) {
         // 如果没有上一楼层，使用当前楼层的数据作为旧数据
         oldVariables = currentVariables;
@@ -1254,7 +943,7 @@ function initFatePhone() {
         _.set(currentStatData, '公司账户._现金', calculatedCompanyCash);
         _.set(currentStatData, '个人账户._现金', calculatedPersonalCash);
         _.set(currentVariables, 'stat_data', currentStatData);
-        await window.Mvu!.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
+        await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
 
         // 计算固定成本总额（4个字段）
         const humanCost = Number(_.get(oldFixedCosts, '人力成本')) || 0;
@@ -1302,7 +991,7 @@ function initFatePhone() {
         _.set(currentStatData, '公司账户._现金', newCompanyCash);
         _.set(currentStatData, '个人账户._现金', newPersonalCash);
         _.set(currentVariables, 'stat_data', currentStatData);
-        await window.Mvu!.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
+        await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
 
         let message = `现金重算完成（简化模式）！`;
         message += `\n\n【公司账户】`;
@@ -1403,10 +1092,14 @@ function initFatePhone() {
     }
   });
 
-  content.on('touchstart', e => startDrag(e.originalEvent.touches[0].pageY));
+  content.on('touchstart', e => {
+    if (e.originalEvent?.touches?.[0]) {
+      startDrag(e.originalEvent.touches[0].pageY);
+    }
+  });
   content.on('touchend', stopDrag);
   content.on('touchmove', e => {
-    if (isDown) {
+    if (isDown && e.originalEvent?.touches?.[0]) {
       doDrag(e.originalEvent.touches[0].pageY);
     }
   });
@@ -1419,7 +1112,7 @@ function initFatePhone() {
     if (initCount > 6) clearInterval(initInterval);
   }, 500);
 
-  let updateTimer: NodeJS.Timeout | null = null;
+  let updateTimer: ReturnType<typeof setTimeout> | null = null;
   const debouncedUpdate = () => {
     if (updateTimer) clearTimeout(updateTimer);
     updateTimer = setTimeout(() => {
@@ -1428,14 +1121,20 @@ function initFatePhone() {
     }, 500);
   };
 
-  if (window.eventOn) {
-    if (window.tavern_events) eventOn(tavern_events.MESSAGE_RECEIVED, debouncedUpdate);
-    if (window.Mvu && Mvu.events) eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, debouncedUpdate);
+  if (typeof eventOn === 'function') {
+    if (typeof tavern_events !== 'undefined') {
+      eventOn(tavern_events.MESSAGE_RECEIVED, debouncedUpdate);
+    }
+    if (typeof Mvu !== 'undefined' && Mvu.events) {
+      eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, debouncedUpdate);
+    }
     try {
-      if (window.parent && window.parent.eventOn && window.parent.Mvu) {
-        window.parent.eventOn(window.parent.Mvu.events.VARIABLE_UPDATE_ENDED, debouncedUpdate);
+      if (window.parent && (window.parent as any).eventOn && (window.parent as any).Mvu) {
+        (window.parent as any).eventOn((window.parent as any).Mvu.events.VARIABLE_UPDATE_ENDED, debouncedUpdate);
       }
-    } catch (e) {}
+    } catch (e) {
+      // 忽略跨域访问错误
+    }
   }
 
   /**
@@ -1445,8 +1144,9 @@ function initFatePhone() {
    * - 个人账户._现金 (根据上一轮数据 + 一次性变动 + 月度固定收支与跨月数计算)
    * - 公司账户._现金 (根据上一轮数据 + 一次性变动 + 固定成本与项目月毛利、跨月数计算)
    * - 公司账户.运行项目.${项目名}._月毛利 (根据 月销量 * 单价 * (1 - 可变成本率) 计算)
+   * - 公司账户.运行项目.${项目名}.项目范围（当旧数据中已有值时，拒绝任何覆盖，始终保留旧值）
    */
-  if (window.Mvu && Mvu.events) {
+  if (typeof Mvu !== 'undefined' && Mvu.events) {
     eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (new_variables, old_variables) => {
       const old_stat_data = _.get(old_variables, 'stat_data');
       const new_stat_data = _.get(new_variables, 'stat_data');
@@ -1578,13 +1278,31 @@ function initFatePhone() {
         }
       }
 
-      // 计算并保护 公司账户.运行项目.${项目名}._月毛利
+      // 计算并保护 公司账户.运行项目.${项目名}._月毛利 和 项目范围
       const new_running_projects = _.get(new_stat_data, '公司账户.运行项目');
       if (new_running_projects && typeof new_running_projects === 'object') {
+        const old_running_projects_for_scope =
+          old_running_projects && typeof old_running_projects === 'object' ? old_running_projects : {};
+
         // 遍历新项目中的所有项目
         for (const project_name in new_running_projects) {
           const new_project = new_running_projects[project_name];
+          const old_project = (old_running_projects_for_scope as any)[project_name];
+
           if (new_project && typeof new_project === 'object') {
+            // 保护「项目范围」：如果旧数据中已存在该字段，则拒绝覆盖，始终保留旧值
+            if (old_project && typeof old_project === 'object' && '项目范围' in old_project) {
+              const oldScope = old_project.项目范围;
+              const newScope = new_project.项目范围;
+
+              if (newScope !== undefined && newScope !== oldScope) {
+                _.set(new_stat_data, `公司账户.运行项目.${project_name}.项目范围`, oldScope);
+                console.info(
+                  `[状态栏-只读字段] 保护项目范围: 项目=${project_name}, 拒绝修改为=${newScope}, 保留旧值=${oldScope}`,
+                );
+              }
+            }
+
             const monthlySales = new_project.月销量;
             const unitPrice = new_project.单价;
             const variableCostRate =
@@ -1615,8 +1333,8 @@ $(
     await waitGlobalInitialized('Mvu');
     await waitUntil(() => {
       try {
-        if (window.Mvu && typeof window.Mvu.getMvuData === 'function') {
-          const variables = window.Mvu.getMvuData({ type: 'message', message_id: 'latest' });
+        if (typeof Mvu !== 'undefined' && typeof Mvu.getMvuData === 'function') {
+          const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
           return variables && _.has(variables, 'stat_data');
         }
       } catch (e) {
@@ -1625,7 +1343,7 @@ $(
       return false;
     });
     const checkReady = setInterval(() => {
-      if (window.jQuery) {
+      if (typeof $ !== 'undefined') {
         clearInterval(checkReady);
         initFatePhone();
       }
