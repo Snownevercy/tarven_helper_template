@@ -227,11 +227,14 @@ const POSITIONS = [
   { name: 'TR', css: { top: '60px', right: '10px', bottom: 'auto', left: 'auto' } },
 ];
 
-  const fateState = {
+const fateState = {
   currentTab: localStorage.getItem(window.FATE_CONFIG?.storageTab || '') || 'home',
   isCollapsed: localStorage.getItem(window.FATE_CONFIG?.storageCollapse || '') === 'true',
   // 确保位置索引在有效范围内（只有上方两个位置）
-  posIndex: Math.min(parseInt(localStorage.getItem(window.FATE_CONFIG?.storagePosIndex || '') || '0') || 0, POSITIONS.length - 1),
+  posIndex: Math.min(
+    parseInt(localStorage.getItem(window.FATE_CONFIG?.storagePosIndex || '') || '0') || 0,
+    POSITIONS.length - 1,
+  ),
 };
 
 const fateStyles = `
@@ -391,7 +394,10 @@ const renderModules = {
     const renderContract = (contractStr: string): string => {
       if (!contractStr || contractStr === '无') return '无';
       // 按分号分割，每个合约单独一行
-      const contracts = contractStr.split(/[;；]/).map(c => c.trim()).filter(c => c);
+      const contracts = contractStr
+        .split(/[;；]/)
+        .map(c => c.trim())
+        .filter(c => c);
       if (contracts.length === 0) return '无';
       if (contracts.length === 1) return contracts[0];
       return contracts.map(c => `<div style="margin-bottom:2px;">${c}</div>`).join('');
@@ -507,7 +513,8 @@ const renderModules = {
                 const price = '单价' in project ? project.单价 : 0;
                 const monthlyProfit = '_月毛利' in project ? project._月毛利 : 0;
                 // 兼容两个字段名：优先读取 可变成本率，其次 边际成本率
-                const costRate = '可变成本率' in project ? project.可变成本率 : ('边际成本率' in project ? project.边际成本率 : 0.3);
+                const costRate =
+                  '可变成本率' in project ? project.可变成本率 : '边际成本率' in project ? project.边际成本率 : 0.3;
                 return `<div class="list-item project-item" data-project-name="${key.replace(/"/g, '&quot;')}" style="padding:4px 0;">
                       <div style="flex:1;">
                         <span class="hl-val">${key}</span>
@@ -739,7 +746,7 @@ function initFatePhone() {
   const handleClockClick = (e: JQuery.Event) => {
     e.stopPropagation();
     e.preventDefault();
-    
+
     // 防抖处理，避免快速多次点击
     if (clockClickTimer) {
       clearTimeout(clockClickTimer);
@@ -751,7 +758,7 @@ function initFatePhone() {
       clockClickTimer = null;
     }, 150);
   };
-  
+
   container.on('click', '#fp-clock', handleClockClick);
   // 阻止触摸事件触发拖拽逻辑
   container.on('touchstart', '#fp-clock', function (e) {
@@ -783,7 +790,12 @@ function initFatePhone() {
             $('#modal-monthly-sales').val(project.月销量 || 0);
             $('#modal-price').val(project.单价 || 0);
             // 兼容两个字段名：优先读取 可变成本率，其次 边际成本率
-            const costRate = '可变成本率' in project ? project.可变成本率 : ('边际成本率' in project ? (project as any).边际成本率 : 0.3);
+            const costRate =
+              '可变成本率' in project
+                ? project.可变成本率
+                : '边际成本率' in project
+                  ? (project as any).边际成本率
+                  : 0.3;
             $('#modal-cost-rate').val(costRate);
           }
         }
@@ -1164,9 +1176,7 @@ function initFatePhone() {
         const calculatedAge = calculateAge(currentDate, birthday);
         if (calculatedAge !== null) {
           _.set(new_stat_data, '主角._年龄', calculatedAge);
-          console.info(
-            `[状态栏-只读字段] 计算年龄: 当前日期=${currentDate}, 生日=${birthday}, 年龄=${calculatedAge}`,
-          );
+          console.info(`[状态栏-只读字段] 计算年龄: 当前日期=${currentDate}, 生日=${birthday}, 年龄=${calculatedAge}`);
         } else {
           console.warn(`[状态栏-只读字段] 年龄计算失败: 当前日期=${currentDate}, 生日=${birthday}`);
         }
@@ -1176,12 +1186,7 @@ function initFatePhone() {
       const old_current_date = _.get(old_stat_data, '世界.当前日期');
       const new_current_date = _.get(new_stat_data, '世界.当前日期');
       let monthCrossing = 0;
-      if (
-        old_current_date &&
-        new_current_date &&
-        old_current_date !== '待定' &&
-        new_current_date !== '待定'
-      ) {
+      if (old_current_date && new_current_date && old_current_date !== '待定' && new_current_date !== '待定') {
         monthCrossing = calculateMonthCrossing(old_current_date, new_current_date);
         console.info(
           `[状态栏-只读字段] 计算跨月数: 旧日期=${old_current_date}, 新日期=${new_current_date}, 跨月数=${monthCrossing}`,

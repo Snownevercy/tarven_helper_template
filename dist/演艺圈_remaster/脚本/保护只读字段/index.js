@@ -1,9 +1,0 @@
-var __webpack_modules__ = {
-  "./src/演艺圈_remaster/脚本/保护只读字段/index.ts"() {
-    eval("{\n/**\n * 本脚本的原有功能（保护只读字段并自动计算只读值）\n * 已经完整整合进 `脚本/状态栏/index.ts` 中。\n *\n * 为避免：\n * - 监听事件被注册两次\n * - 同一组函数在两个脚本里重复实现\n * 现在保留一个「空壳脚本」，仅输出提示，不再执行任何逻辑。\n */\n$(() => {\n    console.info('[保护只读字段] 功能已整合进「状态栏」脚本，本脚本当前不再执行任何变量计算逻辑（安全空壳）。');\n});\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiLi9zcmMv5ryU6Im65ZyIX3JlbWFzdGVyL+iEmuacrC/kv53miqTlj6ror7vlrZfmrrUvaW5kZXgudHMiLCJtYXBwaW5ncyI6IjtBQUFBOzs7Ozs7OztHQVFHO0FBRUgsQ0FBQyxDQUFDLEdBQUcsRUFBRTtJQUNMLE9BQU8sQ0FBQyxJQUFJLENBQ1YsaURBQWlELENBQ2xELENBQUM7QUFDSixDQUFDLENBQUMsQ0FBQyIsInNvdXJjZXMiOlsic3JjOi8vdGF2ZXJuX2hlbHBlcl90ZW1wbGF0ZS9zcmMv5ryU6Im65ZyIX3JlbWFzdGVyL+iEmuacrC/kv53miqTlj6ror7vlrZfmrrUvaW5kZXgudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiDmnKzohJrmnKznmoTljp/mnInlip/og73vvIjkv53miqTlj6ror7vlrZfmrrXlubboh6rliqjorqHnrpflj6ror7vlgLzvvIlcbiAqIOW3sue7j+WujOaVtOaVtOWQiOi/myBg6ISa5pysL+eKtuaAgeagjy9pbmRleC50c2Ag5Lit44CCXG4gKlxuICog5Li66YG/5YWN77yaXG4gKiAtIOebkeWQrOS6i+S7tuiiq+azqOWGjOS4pOasoVxuICogLSDlkIzkuIDnu4Tlh73mlbDlnKjkuKTkuKrohJrmnKzph4zph43lpI3lrp7njrBcbiAqIOeOsOWcqOS/neeVmeS4gOS4quOAjOepuuWjs+iEmuacrOOAje+8jOS7hei+k+WHuuaPkOekuu+8jOS4jeWGjeaJp+ihjOS7u+S9lemAu+i+keOAglxuICovXG5cbiQoKCkgPT4ge1xuICBjb25zb2xlLmluZm8oXG4gICAgJ1vkv53miqTlj6ror7vlrZfmrrVdIOWKn+iDveW3suaVtOWQiOi/m+OAjOeKtuaAgeagj+OAjeiEmuacrO+8jOacrOiEmuacrOW9k+WJjeS4jeWGjeaJp+ihjOS7u+S9leWPmOmHj+iuoeeul+mAu+i+ke+8iOWuieWFqOepuuWjs++8ieOAgicsXG4gICk7XG59KTtcbiJdLCJuYW1lcyI6W10sImlnbm9yZUxpc3QiOltdLCJzb3VyY2VSb290IjoiIn0=\n//# sourceURL=webpack-internal:///./src/演艺圈_remaster/脚本/保护只读字段/index.ts\n\n}");
-  }
-};
-
-var __webpack_exports__ = {};
-
-__webpack_modules__["./src/演艺圈_remaster/脚本/保护只读字段/index.ts"]();

@@ -38,21 +38,11 @@ export const Schema = z.object({
   //--- 个人账户 ---
   个人账户: z
     .object({
-
-      月度固定收入: z.coerce
-        .number()
-        .prefault(0)
-        .describe('每月固定收入总和：工资、租金收入、投资分红等'),
-      月度固定支出: z.coerce
-        .number()
-        .prefault(0)
-        .describe('每月固定支出总和：房租、贷款月供、生活费等'),
+      月度固定收入: z.coerce.number().prefault(0).describe('每月固定收入总和：工资、租金收入、投资分红等'),
+      月度固定支出: z.coerce.number().prefault(0).describe('每月固定支出总和：房租、贷款月供、生活费等'),
 
       // === 一次性变动（AI 可写）===
-      私账一次性变动: z.coerce
-        .number()
-        .prefault(0)
-        .describe('本轮一次性收支净变动（正数=收入，负数=支出）'),
+      私账一次性变动: z.coerce.number().prefault(0).describe('本轮一次性收支净变动（正数=收入，负数=支出）'),
 
       // === 其他信息（AI 可写）===
       合约状态: z.string().prefault('无'),
@@ -87,15 +77,11 @@ export const Schema = z.object({
             月销量: z.coerce
               .number()
               .prefault(0)
-              .describe(
-                '规模指标(volume)：按量计费=本月销量；订阅=本月活跃/付费用户数(user base)',
-              ),
+              .describe('规模指标(volume)：按量计费=本月销量；订阅=本月活跃/付费用户数(user base)'),
             单价: z.coerce
               .number()
               .prefault(0)
-              .describe(
-                '单位收益(unit value)：按量计费=每次/每件平均收入；订阅=每用户每月平均收入(ARPU)',
-              ),
+              .describe('单位收益(unit value)：按量计费=每次/每件平均收入；订阅=每用户每月平均收入(ARPU)'),
             可变成本率: z.coerce
               .number()
               .transform(v => _.clamp(v, 0, 1))
@@ -113,15 +99,11 @@ export const Schema = z.object({
           人力成本: z.coerce
             .number()
             .prefault(0)
-            .describe(
-              'Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).',
-            ),
+            .describe('Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).'),
           场地成本: z.coerce
             .number()
             .prefault(0)
-            .describe(
-              'Office / studio rent and facility utilities (operating expenses: usually classified as G&A).',
-            ),
+            .describe('Office / studio rent and facility utilities (operating expenses: usually classified as G&A).'),
           营销预算: z.coerce
             .number()
             .prefault(0)
@@ -132,10 +114,7 @@ export const Schema = z.object({
         })
         .prefault({}),
 
-      公账一次性变动: z.coerce
-        .number()
-        .prefault(0)
-        .describe('本轮非经营性资金流动（正数=收入，负数=支出）'),
+      公账一次性变动: z.coerce.number().prefault(0).describe('本轮非经营性资金流动（正数=收入，负数=支出）'),
 
       _现金: z.coerce.number().prefault(0),
     })
