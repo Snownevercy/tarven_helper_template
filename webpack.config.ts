@@ -107,6 +107,7 @@ function watch_tavern_helper(compiler: webpack.Compiler) {
 }
 
 let watcher: FSWatcher;
+<<<<<<< HEAD
 const execute = () => {
   exec('pnpm dump', { cwd: import.meta.dirname });
   console.info('\x1b[36m[schema_dump]\x1b[0m 已将所有 schema.ts 转换为 schema.json');
@@ -116,19 +117,47 @@ function dump_schema(compiler: webpack.Compiler) {
   if (!compiler.options.watch) {
     execute_debounced();
   } else if (!watcher) {
+=======
+const dump = () => {
+  exec('pnpm dump', { cwd: import.meta.dirname });
+  console.info('\x1b[36m[schema_dump]\x1b[0m 已将所有 schema.ts 转换为 schema.json');
+};
+const dump_debounced = _.debounce(dump, 500, { leading: true, trailing: false });
+function schema_dump(compiler: webpack.Compiler) {
+  if (!compiler.options.watch) {
+    dump_debounced();
+    return;
+  }
+  if (!watcher) {
+>>>>>>> 3ff3ec895fe0b8683e26537ccb33fbb96c7c9535
     watcher = watch('src', {
       awaitWriteFinish: true,
     }).on('all', (_event, path) => {
       if (path.endsWith('schema.ts')) {
+<<<<<<< HEAD
         execute_debounced();
+=======
+        dump_debounced();
+>>>>>>> 3ff3ec895fe0b8683e26537ccb33fbb96c7c9535
       }
     });
   }
 }
 
 let child_process: ChildProcess;
+<<<<<<< HEAD
 function watch_tavern_sync(compiler: webpack.Compiler) {
   if (!compiler.options.watch) {
+=======
+const bundle = () => {
+  exec('pnpm sync bundle all', { cwd: import.meta.dirname });
+  console.info('\x1b[36m[tavern_sync]\x1b[0m 已打包所有配置了的角色卡/世界书/预设');
+};
+const bundle_debounced = _.debounce(bundle, 500, { leading: true, trailing: false });
+function tavern_sync(compiler: webpack.Compiler) {
+  if (!compiler.options.watch) {
+    bundle_debounced();
+>>>>>>> 3ff3ec895fe0b8683e26537ccb33fbb96c7c9535
     return;
   }
   compiler.hooks.watchRun.tap('watch_tavern_sync', () => {
@@ -430,8 +459,13 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
     )
       .concat(
         { apply: watch_tavern_helper },
+<<<<<<< HEAD
         { apply: dump_schema },
         { apply: watch_tavern_sync },
+=======
+        { apply: schema_dump },
+        { apply: tavern_sync },
+>>>>>>> 3ff3ec895fe0b8683e26537ccb33fbb96c7c9535
         new VueLoaderPlugin(),
         unpluginAutoImport({
           dts: true,
