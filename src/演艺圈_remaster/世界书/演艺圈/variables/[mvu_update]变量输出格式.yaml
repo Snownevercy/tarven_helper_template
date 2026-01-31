@@ -10,7 +10,8 @@
     - don't update field names starts with `_` as they are readonly, such as `_变量`
   format: |-
     <UpdateVariable>
-    <Analysis>$(IN ENGLISH, no more than 80 words)
+    ${display every `check` in `变量更新规则` document before actual variable analysis}
+    <Analysis>$(IN ENGLISH, no more than 250 words)
     - ${calculate time passed: ...}
     - ${decide whether dramatic updates are allowed as it's in a special case or the time passed is more than usual: yes/no}
     - ${analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots: ...}

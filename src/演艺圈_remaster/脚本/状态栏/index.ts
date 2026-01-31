@@ -129,7 +129,7 @@ function calculateMonthCrossing(oldDateStr: string, newDateStr: string): number 
 /**
  * 计算公司账户现金
  * 跨月数为0：_现金 = 上一轮_现金 + 最新公账一次性变动
- * 跨月数>=1：_现金 = 上一轮_现金 + 最新公账一次性变动 - 固定成本(上一轮) * 跨月数 + 所有运行项目月毛利(上一轮) * 跨月数
+ * 跨月数>=1：_现金 = 上一轮_现金 + 最新公账一次性变动 - 月度固定支出(上一轮) * 跨月数 + 所有月度收入来源月毛利(上一轮) * 跨月数
  */
 function calculateCompanyCash(
   oldCash: number,
@@ -144,16 +144,16 @@ function calculateCompanyCash(
   // 加上一次性变动
   cash += change;
 
-  // 如果跨月，需要扣除固定成本，加上运行项目的月毛利
+  // 如果跨月，需要扣除月度固定支出，加上月度收入来源的月毛利
   if (monthCrossing >= 1) {
-    // 计算固定成本（人力成本 + 场地成本 + 营销预算 + 其他运营）
-    const humanCost = Number(_.get(oldFixedCosts, '人力成本')) || 0;
-    const placeCost = Number(_.get(oldFixedCosts, '场地成本')) || 0;
-    const marketingBudget = Number(_.get(oldFixedCosts, '营销预算')) || 0;
-    const otherOps = Number(_.get(oldFixedCosts, '其他运营')) || 0;
+    // 计算月度固定支出（人力 + 场地 + 营销 + 其他）
+    const humanCost = Number(_.get(oldFixedCosts, '人力')) || 0;
+    const placeCost = Number(_.get(oldFixedCosts, '场地')) || 0;
+    const marketingBudget = Number(_.get(oldFixedCosts, '营销')) || 0;
+    const otherOps = Number(_.get(oldFixedCosts, '其他')) || 0;
     const totalFixedCost = humanCost + placeCost + marketingBudget + otherOps;
 
-    // 计算所有运行项目的月毛利总和
+    // 计算所有月度收入来源的月毛利总和
     let totalMonthlyProfit = 0;
     if (oldRunningProjects && typeof oldRunningProjects === 'object') {
       for (const project_name in oldRunningProjects) {
@@ -165,7 +165,7 @@ function calculateCompanyCash(
       }
     }
 
-    // 扣除固定成本，加上月毛利（乘以跨月数）
+    // 扣除月度固定支出，加上月毛利（乘以跨月数）
     cash -= totalFixedCost * monthCrossing;
     cash += totalMonthlyProfit * monthCrossing;
   }
@@ -474,14 +474,14 @@ const renderModules = {
   },
   business: (sd: z.infer<typeof Schema>) => {
     const companyCash = getVal(sd, '公司账户._现金', 0);
-    const fixedCosts = getVal(sd, '公司账户.固定成本', {});
+    const fixedCosts = getVal(sd, '公司账户.月度固定支出', {});
     const oneTimeChange = getVal(sd, '公司账户.公账一次性变动', 0);
-    const runningProjects = getVal(sd, '公司账户.运行项目', {});
+    const runningProjects = getVal(sd, '公司账户.月度收入来源', {});
 
-    // 固定成本字段顺序
-    const fixedCostKeys = ['人力成本', '场地成本', '营销预算', '其他运营'];
+    // 月度固定支出字段顺序
+    const fixedCostKeys = ['人力', '场地', '营销', '其他'];
 
-    // 渲染固定成本（按指定顺序）
+    // 渲染月度固定支出（按指定顺序）
     const fixedCostsList: string =
       typeof fixedCosts === 'object' && fixedCosts !== null
         ? fixedCostKeys
@@ -493,16 +493,16 @@ const renderModules = {
                 <span class="info-val">¥${numValue.toLocaleString()}/月</span>
               </div>`;
             })
-            .join('') || '<div style="font-size:10px; color:#555; padding:4px;">暂无固定成本</div>'
-        : '<div style="font-size:10px; color:#555; padding:4px;">暂无固定成本</div>';
+            .join('') || '<div style="font-size:10px; color:#555; padding:4px;">暂无月度固定支出</div>'
+        : '<div style="font-size:10px; color:#555; padding:4px;">暂无月度固定支出</div>';
 
-    // 计算固定成本总额
+    // 计算月度固定支出总额
     const totalFixedCost = fixedCostKeys.reduce((sum, key) => {
       const value = fixedCosts?.[key];
       return sum + (typeof value === 'number' ? value : parseFloat(String(value)) || 0);
     }, 0);
 
-    // 渲染运行项目列表（兼容 可变成本率 和 边际成本率 两个字段名）
+    // 渲染月度收入来源列表（兼容 可变成本率 和 边际成本率 两个字段名）
     const projectsList: string =
       typeof runningProjects === 'object' && runningProjects !== null
         ? Object.keys(runningProjects)
@@ -536,10 +536,10 @@ const renderModules = {
               return null;
             })
             .filter(Boolean)
-            .join('') || '<div style="font-size:10px; color:#555; padding:4px;">暂无运行项目</div>'
-        : '<div style="font-size:10px; color:#555; padding:4px;">暂无运行项目</div>';
+            .join('') || '<div style="font-size:10px; color:#555; padding:4px;">暂无月度收入来源</div>'
+        : '<div style="font-size:10px; color:#555; padding:4px;">暂无月度收入来源</div>';
 
-    // 计算运行项目月毛利总额
+    // 计算月度收入来源月毛利总额
     let totalMonthlyProfit = 0;
     if (typeof runningProjects === 'object' && runningProjects !== null) {
       for (const key in runningProjects) {
@@ -550,7 +550,7 @@ const renderModules = {
       }
     }
 
-    // 月度净利润 = 月毛利总额 - 固定成本总额
+    // 月度净利润 = 月毛利总额 - 月度固定支出总额
     const monthlyNetProfit = totalMonthlyProfit - totalFixedCost;
 
     return `
@@ -563,12 +563,12 @@ const renderModules = {
             <div class="info-row"><span class="info-key">月度净利润</span><span class="info-val" style="color:${monthlyNetProfit >= 0 ? '#4a9' : '#a44'};">${monthlyNetProfit >= 0 ? '+' : ''}¥${monthlyNetProfit.toLocaleString()}/月</span></div>
         </div>
         <div class="card">
-            <div class="card-title">运行项目</div>
+            <div class="card-title">月度收入来源</div>
             ${projectsList}
-            <div class="btn-add btn-add-project">+ 新增项目</div>
+            <div class="btn-add btn-add-project">+ 新增收入来源</div>
         </div>
         <div class="card">
-            <div class="card-title">固定成本 <span style="font-size:8px; color:#666; font-weight:400;">(合计: ¥${totalFixedCost.toLocaleString()}/月)</span></div>
+            <div class="card-title">月度固定支出 <span style="font-size:8px; color:#666; font-weight:400;">(合计: ¥${totalFixedCost.toLocaleString()}/月)</span></div>
             ${fixedCostsList}
         </div>
         <div class="card">
@@ -675,7 +675,7 @@ function initFatePhone() {
   const modalHtml = `
     <div id="project-modal" class="modal-overlay">
       <div class="modal-content">
-        <div class="modal-title" id="modal-title">新增运行项目</div>
+        <div class="modal-title" id="modal-title">新增收入来源</div>
         <div class="form-group">
           <label class="form-label">项目名称</label>
           <input type="text" id="modal-project-name" class="form-input" placeholder="请输入项目名称" />
@@ -775,7 +775,7 @@ function initFatePhone() {
     const modal = $('#project-modal');
     const isEdit = !!projectName;
 
-    $('#modal-title').text(isEdit ? '编辑运行项目' : '新增运行项目');
+    $('#modal-title').text(isEdit ? '编辑收入来源' : '新增收入来源');
     $('#modal-project-name').val(projectName || '');
     $('#modal-project-name').prop('disabled', isEdit);
 
@@ -783,7 +783,7 @@ function initFatePhone() {
       try {
         const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
         const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
-        const projects = stat_data.公司账户?.运行项目;
+        const projects = stat_data.公司账户?.月度收入来源;
         if (projects && typeof projects === 'object' && projectName) {
           const project = projects[projectName];
           if (project && typeof project === 'object') {
@@ -842,20 +842,21 @@ function initFatePhone() {
 
       if (!stat_data.公司账户) {
         stat_data.公司账户 = {
-          运行项目: {},
-          固定成本: { 人力成本: 0, 场地成本: 0, 营销预算: 0, 其他运营: 0 },
+          月度收入来源: {},
+          月度固定支出: { 人力: 0, 场地: 0, 营销: 0, 其他: 0 },
           公账一次性变动: 0,
           _现金: 0,
         };
       }
-      if (!stat_data.公司账户.运行项目) {
-        stat_data.公司账户.运行项目 = {};
+      if (!stat_data.公司账户.月度收入来源) {
+        stat_data.公司账户.月度收入来源 = {};
       }
 
       // 计算月毛利
       const monthlyProfit = monthlySales * price * (1 - costRate);
 
-      stat_data.公司账户.运行项目[projectName] = {
+      stat_data.公司账户.月度收入来源[projectName] = {
+        _业务范围: '待定',
         月销量: monthlySales,
         单价: price,
         可变成本率: _.clamp(costRate, 0, 1),
@@ -883,8 +884,8 @@ function initFatePhone() {
       const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
       const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
 
-      if (stat_data.公司账户?.运行项目 && projectName in stat_data.公司账户.运行项目) {
-        delete stat_data.公司账户.运行项目[projectName];
+      if (stat_data.公司账户?.月度收入来源 && projectName in stat_data.公司账户.月度收入来源) {
+        delete stat_data.公司账户.月度收入来源[projectName];
         _.set(variables, 'stat_data', stat_data);
         await Mvu.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
 
@@ -920,8 +921,8 @@ function initFatePhone() {
       // 公司账户相关
       const oldCompanyCash = _.get(oldStatData, '公司账户._现金', 0);
       const companyOneTimeChange = _.get(currentStatData, '公司账户.公账一次性变动', 0);
-      const oldFixedCosts = _.get(oldStatData, '公司账户.固定成本', {});
-      const oldRunningProjects = _.get(oldStatData, '公司账户.运行项目', {});
+      const oldFixedCosts = _.get(oldStatData, '公司账户.月度固定支出', {});
+      const oldRunningProjects = _.get(oldStatData, '公司账户.月度收入来源', {});
 
       // 个人账户相关
       const oldPersonalCash = _.get(oldStatData, '个人账户._现金', 0);
@@ -957,11 +958,11 @@ function initFatePhone() {
         _.set(currentVariables, 'stat_data', currentStatData);
         await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
 
-        // 计算固定成本总额（4个字段）
-        const humanCost = Number(_.get(oldFixedCosts, '人力成本')) || 0;
-        const placeCost = Number(_.get(oldFixedCosts, '场地成本')) || 0;
-        const marketingBudget = Number(_.get(oldFixedCosts, '营销预算')) || 0;
-        const otherOps = Number(_.get(oldFixedCosts, '其他运营')) || 0;
+        // 计算月度固定支出总额（4个字段）
+        const humanCost = Number(_.get(oldFixedCosts, '人力')) || 0;
+        const placeCost = Number(_.get(oldFixedCosts, '场地')) || 0;
+        const marketingBudget = Number(_.get(oldFixedCosts, '营销')) || 0;
+        const otherOps = Number(_.get(oldFixedCosts, '其他')) || 0;
         const totalFixedCost = humanCost + placeCost + marketingBudget + otherOps;
 
         let totalMonthlyProfit = 0;
@@ -986,7 +987,7 @@ function initFatePhone() {
         if (monthCrossing > 0) {
           message += `\n\n【跨月计算】`;
           message += `\n跨月数: ${monthCrossing}`;
-          message += `\n公司固定成本: ¥${totalFixedCost.toLocaleString()}/月`;
+          message += `\n公司月度固定支出: ¥${totalFixedCost.toLocaleString()}/月`;
           message += `\n公司月毛利: ¥${totalMonthlyProfit.toLocaleString()}/月`;
           message += `\n个人月净收入: ¥${monthlyNet.toLocaleString()}/月`;
         }
@@ -1154,9 +1155,9 @@ function initFatePhone() {
    *
    * - 主角._年龄 (根据 世界.当前日期 和 主角.生日 计算)
    * - 个人账户._现金 (根据上一轮数据 + 一次性变动 + 月度固定收支与跨月数计算)
-   * - 公司账户._现金 (根据上一轮数据 + 一次性变动 + 固定成本与项目月毛利、跨月数计算)
-   * - 公司账户.运行项目.${项目名}._月毛利 (根据 月销量 * 单价 * (1 - 可变成本率) 计算)
-   * - 公司账户.运行项目.${项目名}.项目范围（当旧数据中已有值时，拒绝任何覆盖，始终保留旧值）
+   * - 公司账户._现金 (根据上一轮数据 + 一次性变动 + 月度固定支出与收入来源月毛利、跨月数计算)
+   * - 公司账户.月度收入来源.${项目名}._月毛利 (根据 月销量 * 单价 * (1 - 可变成本率) 计算)
+   * - 公司账户.月度收入来源.${项目名}._业务范围（当旧数据中已有值时，拒绝任何覆盖，始终保留旧值）
    */
   if (typeof Mvu !== 'undefined' && Mvu.events) {
     eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (new_variables, old_variables) => {
@@ -1229,15 +1230,15 @@ function initFatePhone() {
       // 计算并保护 公司账户._现金
       const old_company_cash = _.get(old_stat_data, '公司账户._现金');
       const companyOneTimeChange = _.get(new_stat_data, '公司账户.公账一次性变动');
-      const old_fixed_costs = _.get(old_stat_data, '公司账户.固定成本');
-      const old_running_projects = _.get(old_stat_data, '公司账户.运行项目');
+      const old_fixed_costs = _.get(old_stat_data, '公司账户.月度固定支出');
+      const old_running_projects = _.get(old_stat_data, '公司账户.月度收入来源');
 
       if (old_company_cash !== undefined) {
-        // 计算固定成本和月毛利（用于日志）
-        const humanCost = Number(_.get(old_fixed_costs, '人力成本')) || 0;
-        const placeCost = Number(_.get(old_fixed_costs, '场地成本')) || 0;
-        const marketingCost = Number(_.get(old_fixed_costs, '营销预算')) || 0;
-        const otherCost = Number(_.get(old_fixed_costs, '其他运营')) || 0;
+        // 计算月度固定支出和月毛利（用于日志）
+        const humanCost = Number(_.get(old_fixed_costs, '人力')) || 0;
+        const placeCost = Number(_.get(old_fixed_costs, '场地')) || 0;
+        const marketingCost = Number(_.get(old_fixed_costs, '营销')) || 0;
+        const otherCost = Number(_.get(old_fixed_costs, '其他')) || 0;
         const totalFixedCost = humanCost + placeCost + marketingCost + otherCost;
 
         let totalMonthlyProfit = 0;
@@ -1271,7 +1272,7 @@ function initFatePhone() {
           );
         } else {
           console.info(
-            `[状态栏-只读字段] 计算公司现金(跨${monthCrossing}个月): 旧现金=${old_company_cash}, 一次性变动=${companyOneTimeChange}, 固定成本=${totalFixedCost}(人力${humanCost}+场地${placeCost}+营销${marketingCost}+其他${otherCost}), 月毛利总和=${totalMonthlyProfit}, 新现金=${calculatedCash}`,
+            `[状态栏-只读字段] 计算公司现金(跨${monthCrossing}个月): 旧现金=${old_company_cash}, 一次性变动=${companyOneTimeChange}, 月度固定支出=${totalFixedCost}(人力${humanCost}+场地${placeCost}+营销${marketingCost}+其他${otherCost}), 月毛利总和=${totalMonthlyProfit}, 新现金=${calculatedCash}`,
           );
           if (Object.keys(projectProfits).length > 0) {
             console.info(
@@ -1283,8 +1284,8 @@ function initFatePhone() {
         }
       }
 
-      // 计算并保护 公司账户.运行项目.${项目名}._月毛利 和 项目范围
-      const new_running_projects = _.get(new_stat_data, '公司账户.运行项目');
+      // 计算并保护 公司账户.月度收入来源.${项目名}._月毛利 和 _业务范围
+      const new_running_projects = _.get(new_stat_data, '公司账户.月度收入来源');
       if (new_running_projects && typeof new_running_projects === 'object') {
         const old_running_projects_for_scope =
           old_running_projects && typeof old_running_projects === 'object' ? old_running_projects : {};
@@ -1295,15 +1296,15 @@ function initFatePhone() {
           const old_project = (old_running_projects_for_scope as any)[project_name];
 
           if (new_project && typeof new_project === 'object') {
-            // 保护「项目范围」：如果旧数据中已存在该字段，则拒绝覆盖，始终保留旧值
-            if (old_project && typeof old_project === 'object' && '项目范围' in old_project) {
-              const oldScope = old_project.项目范围;
-              const newScope = new_project.项目范围;
+            // 保护「_业务范围」：如果旧数据中已存在该字段，则拒绝覆盖，始终保留旧值
+            if (old_project && typeof old_project === 'object' && '_业务范围' in old_project) {
+              const oldScope = old_project._业务范围;
+              const newScope = new_project._业务范围;
 
               if (newScope !== undefined && newScope !== oldScope) {
-                _.set(new_stat_data, `公司账户.运行项目.${project_name}.项目范围`, oldScope);
+                _.set(new_stat_data, `公司账户.月度收入来源.${project_name}._业务范围`, oldScope);
                 console.info(
-                  `[状态栏-只读字段] 保护项目范围: 项目=${project_name}, 拒绝修改为=${newScope}, 保留旧值=${oldScope}`,
+                  `[状态栏-只读字段] 保护_业务范围: 项目=${project_name}, 拒绝修改为=${newScope}, 保留旧值=${oldScope}`,
                 );
               }
             }
@@ -1319,7 +1320,7 @@ function initFatePhone() {
 
             // 计算月毛利：月销量 * 单价 * (1 - 可变成本率)
             const calculatedProfit = calculateMonthlyProfit(monthlySales, unitPrice, variableCostRate);
-            _.set(new_stat_data, `公司账户.运行项目.${project_name}._月毛利`, calculatedProfit);
+            _.set(new_stat_data, `公司账户.月度收入来源.${project_name}._月毛利`, calculatedProfit);
 
             console.info(
               `[状态栏-只读字段] 计算项目月毛利: 项目=${project_name}, 月销量=${monthlySales}, 单价=${unitPrice}, 可变成本率=${variableCostRate}, 月毛利=${calculatedProfit}`,

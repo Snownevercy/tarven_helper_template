@@ -65,15 +65,15 @@ export const Schema = z.object({
   //--- 公司账户 ---
   公司账户: z
     .object({
-      // 运行项目：记录公司正在运营的业务线/产品线，用于计算经营性收入（月毛利由脚本计算）
-      运行项目: z
+      // 月度收入来源：公司每月经营性收入的来源，每条 key 为业务线类型，脚本根据各条计算 _月毛利
+      月度收入来源: z
         .record(
-          z.string().describe('业务线名称'),
+          z.string().describe('业务线类型名'),
           z.object({
-            项目范围: z
+            _业务范围: z
               .string()
               .prefault('待定')
-              .describe('项目范围（简短文本，描述该项目目前涵盖的业务边界与适用场景）'),
+              .describe('该业务线涵盖的范围与定义（简短文本，用于判断新业务是否归入本条）'),
             月销量: z.coerce
               .number()
               .prefault(0)
@@ -91,26 +91,28 @@ export const Schema = z.object({
           }),
         )
         .prefault({})
-        .describe('公司正在运营的业务线/产品线，用于计算经营性收入'),
+        .describe('公司每月经营性收入的来源；key 为业务线类型，同类型子产品/活动合并到同一条'),
 
-      // 固定成本：扩展为4个子项
-      固定成本: z
+      // 月度固定支出：每月固定成本，与个人账户「月度固定支出」对称
+      月度固定支出: z
         .object({
-          人力成本: z.coerce
-            .number()
-            .prefault(0)
-            .describe('Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).'),
-          场地成本: z.coerce
-            .number()
-            .prefault(0)
-            .describe('Office / studio rent and facility utilities (operating expenses: usually classified as G&A).'),
-          营销预算: z.coerce
+          人力: z.coerce
             .number()
             .prefault(0)
             .describe(
-              'Monthly fixed marketing spend such as ads and promotions (operating expenses: selling & marketing, S&M).',
+              'Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).',
             ),
-          其他运营: z.coerce.number().prefault(0).describe('软件订阅、设备折旧等'),
+          场地成本: z.coerce
+            .number()
+            .prefault(0)
+            .describe(
+              'Office / studio rent and facility utilities (operating expenses: usually classified as G&A).',
+            ),
+          营销预算: z.coerce
+            .number()
+            .prefault(0)
+            .describe('每月固定营销支出（广告、推广等）；大型一次性活动走公账一次性变动'),
+          其他: z.coerce.number().prefault(0).describe('每月其他固定支出（软件订阅、设备折旧、保险等）'),
         })
         .prefault({}),
 

@@ -141,29 +141,29 @@
       "default": {},
       "type": "object",
       "properties": {
-        "运行项目": {
-          "description": "公司正在运营的业务线/产品线，用于计算经营性收入",
+        "月度收入来源": {
+          "description": "公司每月经营性收入的来源；key 为业务线类型，同类型子产品/活动合并到同一条",
           "default": {},
           "$ref": "#/$defs/__schema4"
         },
-        "固定成本": {
+        "月度固定支出": {
           "default": {},
           "type": "object",
           "properties": {
-            "人力成本": {
-              "description": "Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).",
+            "人力": {
+              "description": "每月固定人力成本（工资、社保等）；一次性裁员补偿等走公账一次性变动",
               "$ref": "#/$defs/__schema10"
             },
-            "场地成本": {
-              "description": "Office / studio rent and facility utilities (operating expenses: usually classified as G&A).",
+            "场地": {
+              "description": "每月固定场地成本（租金、水电等）",
               "$ref": "#/$defs/__schema11"
             },
-            "营销预算": {
-              "description": "Monthly fixed marketing spend such as ads and promotions (operating expenses: selling & marketing, S&M).",
+            "营销": {
+              "description": "每月固定营销支出（广告、推广等）；大型一次性活动走公账一次性变动",
               "$ref": "#/$defs/__schema12"
             },
-            "其他运营": {
-              "description": "软件订阅、设备折旧等",
+            "其他": {
+              "description": "每月其他固定支出（软件订阅、设备折旧、保险等）",
               "$ref": "#/$defs/__schema13"
             }
           }
@@ -276,13 +276,13 @@
       "type": "object",
       "propertyNames": {
         "type": "string",
-        "description": "业务线名称"
+        "description": "业务线类型名"
       },
       "additionalProperties": {
         "type": "object",
         "properties": {
-          "项目范围": {
-            "description": "项目范围（简短文本，描述该项目目前涵盖的业务边界与适用场景）",
+          "_业务范围": {
+            "description": "该业务线涵盖的范围与定义（简短文本，用于判断新业务是否归入本条）",
             "default": "待定",
             "$ref": "#/$defs/__schema5"
           },

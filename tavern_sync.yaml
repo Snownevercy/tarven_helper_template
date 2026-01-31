@@ -25,4 +25,4 @@ user名称: 黄宗桡
     # 当使用打包功能 `node tavern_sync.mjs bundle 配置名称` 直接生成世界书/预设文件时, 要将它存放在哪个文件中
     # 你也可以直接删去下面一行不填, 则默认会导出到本地文件路径的同目录下
     #导出文件路径: src/角色卡示例/角色卡示例
-    #node tavern_sync.mjs pull 演艺圈
+    #node tavern_sync.mjs pull 演艺圈 # node tavern_sync.mjs push 演艺圈
