@@ -99,15 +99,11 @@ export const Schema = z.object({
           人力: z.coerce
             .number()
             .prefault(0)
-            .describe(
-              'Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).',
-            ),
+            .describe('Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).'),
           场地成本: z.coerce
             .number()
             .prefault(0)
-            .describe(
-              'Office / studio rent and facility utilities (operating expenses: usually classified as G&A).',
-            ),
+            .describe('Office / studio rent and facility utilities (operating expenses: usually classified as G&A).'),
           营销预算: z.coerce
             .number()
             .prefault(0)

@@ -151,14 +151,14 @@
           "type": "object",
           "properties": {
             "人力": {
-              "description": "每月固定人力成本（工资、社保等）；一次性裁员补偿等走公账一次性变动",
+              "description": "Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).",
               "$ref": "#/$defs/__schema10"
             },
-            "场地": {
-              "description": "每月固定场地成本（租金、水电等）",
+            "场地成本": {
+              "description": "Office / studio rent and facility utilities (operating expenses: usually classified as G&A).",
               "$ref": "#/$defs/__schema11"
             },
-            "营销": {
+            "营销预算": {
               "description": "每月固定营销支出（广告、推广等）；大型一次性活动走公账一次性变动",
               "$ref": "#/$defs/__schema12"
             },
