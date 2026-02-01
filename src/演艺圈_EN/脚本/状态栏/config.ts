@@ -31,10 +31,7 @@ export type FateState = {
 
 export function getInitialFateState(): FateState {
   const cfg = window.FATE_CONFIG ?? FATE_CONFIG;
-  const posIndex = Math.min(
-    parseInt(localStorage.getItem(cfg.storagePosIndex) || '0') || 0,
-    POSITIONS.length - 1,
-  );
+  const posIndex = Math.min(parseInt(localStorage.getItem(cfg.storagePosIndex) || '0') || 0, POSITIONS.length - 1);
   return {
     currentTab: localStorage.getItem(cfg.storageTab) || 'home',
     isCollapsed: localStorage.getItem(cfg.storageCollapse) === 'true',

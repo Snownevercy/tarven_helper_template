@@ -88,10 +88,7 @@ export function calculateMonthCrossing(oldDateStr: string, newDateStr: string): 
 }
 
 /** 跨过的月份列表，用于账期记账。month 为 1–12 */
-export function getCrossedMonths(
-  oldDateStr: string,
-  newDateStr: string,
-): Array<{ year: number; month: number }> {
+export function getCrossedMonths(oldDateStr: string, newDateStr: string): Array<{ year: number; month: number }> {
   const oldDate = parseDate(oldDateStr);
   const newDate = parseDate(newDateStr);
   if (!oldDate || !newDate || newDate <= oldDate) return [];
@@ -220,11 +217,7 @@ export function calculatePersonalCash(
 /**
  * 计算月毛利：月销量 * 单价 * (1 - 可变成本率)
  */
-export function calculateMonthlyProfit(
-  monthlySales: number,
-  unitPrice: number,
-  variableCostRate: number,
-): number {
+export function calculateMonthlyProfit(monthlySales: number, unitPrice: number, variableCostRate: number): number {
   const sales = Number(monthlySales) || 0;
   const price = Number(unitPrice) || 0;
   const costRate = _.clamp(Number(variableCostRate) || 0, 0, 1);

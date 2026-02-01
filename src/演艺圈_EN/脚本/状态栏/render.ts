@@ -7,16 +7,7 @@ import { Schema } from '../../schema';
 export type SchemaData = z.infer<typeof Schema>;
 
 /** 当前咖位合法枚举值，与 schema 中 professionalAssessment.currentTier 一致 */
-const VALID_CURRENT_TIERS = [
-  '待初始化',
-  '素人',
-  '十八线',
-  '三线',
-  '二线',
-  '一线',
-  '顶流',
-  '天王巨星',
-] as const;
+const VALID_CURRENT_TIERS = ['待初始化', '素人', '十八线', '三线', '二线', '一线', '顶流', '天王巨星'] as const;
 
 /**
  * 解析前规范化 stat_data：AI 或世界书可能写出不在 enum 内的值（如空串、空格、错别字），
@@ -25,7 +16,11 @@ const VALID_CURRENT_TIERS = [
 function normalizeStatDataBeforeParse(raw: Record<string, unknown>): Record<string, unknown> {
   const data = _.cloneDeep(raw);
   const tier = _.get(data, 'professionalAssessment.currentTier');
-  if (tier !== undefined && tier !== null && !VALID_CURRENT_TIERS.includes(tier as (typeof VALID_CURRENT_TIERS)[number])) {
+  if (
+    tier !== undefined &&
+    tier !== null &&
+    !VALID_CURRENT_TIERS.includes(tier as (typeof VALID_CURRENT_TIERS)[number])
+  ) {
     _.set(data, 'professionalAssessment.currentTier', '待初始化');
   }
   return data;
@@ -183,7 +178,11 @@ export const renderModules: Record<string, (sd: SchemaData) => string> = {
     const companyCash = getVal(sd, 'companyAccount._cash', 0);
     const fixedCosts = getVal(sd, 'companyAccount.monthlyFixedExpenses', {} as Record<string, number>);
     const oneTimeChange = getVal(sd, 'companyAccount.oneTimeCompanyChange', 0);
-    const runningProjects = getVal(sd, 'companyAccount.monthlyRevenueSources', {} as Record<string, MonthlyRevenueSource>);
+    const runningProjects = getVal(
+      sd,
+      'companyAccount.monthlyRevenueSources',
+      {} as Record<string, MonthlyRevenueSource>,
+    );
 
     const fixedCostEntries: Array<{ key: string; label: string }> = [
       { key: 'payroll', label: '人力' },
@@ -265,7 +264,8 @@ export const renderModules: Record<string, (sd: SchemaData) => string> = {
     const monthlyNetProfit = totalMonthlyProfit - totalFixedCost;
 
     const receivablesByDueMonth = getVal(sd, 'companyAccount.$receivablesByDueMonth', {} as Record<string, number>);
-    const receivablesObj = typeof receivablesByDueMonth === 'object' && receivablesByDueMonth !== null ? receivablesByDueMonth : {};
+    const receivablesObj =
+      typeof receivablesByDueMonth === 'object' && receivablesByDueMonth !== null ? receivablesByDueMonth : {};
     const totalReceivables = Object.values(receivablesObj).reduce((s, v) => s + Number(v || 0), 0);
     const currentDateStr = String(getVal(sd, 'world.currentDate', ''));
     const currentYMMatch = currentDateStr.match(/(\d{4})-(\d{2})/);
@@ -276,11 +276,14 @@ export const renderModules: Record<string, (sd: SchemaData) => string> = {
       if (m === 12) nextYM = `${y + 1}-01`;
       else nextYM = `${y}-${String(m + 1).padStart(2, '0')}`;
     }
-    const nextMonthAmount = nextYM ? (Number(receivablesObj[nextYM]) || 0) : 0;
+    const nextMonthAmount = nextYM ? Number(receivablesObj[nextYM]) || 0 : 0;
     const receivablesDetailRows = Object.keys(receivablesObj)
       .filter(k => /^\d{4}-\d{2}$/.test(k))
       .sort()
-      .map(ym => `<div class="info-row"><span class="info-key">${ym} 到期</span><span class="info-val" style="color:#4a9;">¥${Number(receivablesObj[ym]).toLocaleString()}</span></div>`)
+      .map(
+        ym =>
+          `<div class="info-row"><span class="info-key">${ym} 到期</span><span class="info-val" style="color:#4a9;">¥${Number(receivablesObj[ym]).toLocaleString()}</span></div>`,
+      )
       .join('');
     const receivablesDetailHtml = receivablesDetailRows
       ? `<div class="receivables-detail-list" style="display:none; margin-top:6px;">${receivablesDetailRows}</div>`

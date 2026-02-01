@@ -87,14 +87,12 @@ function initFatePhone(): void {
   const container = $('#fate-phone-container');
   const content = $('#fp-content');
   /** 是否为「新增」模式（否则为「编辑」）。存在模态框 data 上，避免父页点击保存时闭包拿不到 */
-  const getIsAddMode = (): boolean =>
-    $('#project-modal').data('modal-is-add-mode') === true;
+  const getIsAddMode = (): boolean => $('#project-modal').data('modal-is-add-mode') === true;
   const setIsAddMode = (isAdd: boolean) => {
     $('#project-modal').data('modal-is-add-mode', isAdd);
   };
   /** 编辑时的 projectId（仅编辑模式有效） */
-  const getEditingProjectId = (): string | null =>
-    $('#project-modal').data('editing-project-id') ?? null;
+  const getEditingProjectId = (): string | null => $('#project-modal').data('editing-project-id') ?? null;
   const setEditingProjectId = (id: string | null) => {
     $('#project-modal').data('editing-project-id', id ?? undefined);
   };
@@ -170,8 +168,8 @@ function initFatePhone(): void {
     }, CLOCK_DEBOUNCE_MS);
   };
   container.on(`click.${EVENTS_NS}`, '#fp-clock', handleClockClick);
-  container.on(`touchstart.${EVENTS_NS}`, '#fp-clock', (e) => e.stopPropagation());
-  container.on(`touchend.${EVENTS_NS}`, '#fp-clock', (e) => {
+  container.on(`touchstart.${EVENTS_NS}`, '#fp-clock', e => e.stopPropagation());
+  container.on(`touchend.${EVENTS_NS}`, '#fp-clock', e => {
     e.stopPropagation();
     handleClockClick(e);
   });
@@ -180,7 +178,7 @@ function initFatePhone(): void {
     const modal = $('#project-modal');
     const isEdit = !!projectId;
     setIsAddMode(!isEdit);
-    setEditingProjectId(isEdit ? projectId ?? null : null);
+    setEditingProjectId(isEdit ? (projectId ?? null) : null);
     $('#modal-title').text(isEdit ? '编辑收入来源' : '新增收入来源');
     $('#modal-project-name').prop('disabled', false);
     if (isEdit && projectId) {
@@ -189,7 +187,14 @@ function initFatePhone(): void {
         const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
         const sources = stat_data.companyAccount?.monthlyRevenueSources;
         if (sources && typeof sources === 'object' && sources[projectId]) {
-          const project = sources[projectId] as { name?: string; _scope?: string; $paymentTermMonths?: number; monthlyVolume?: number; unitPrice?: number; variableCostRate?: number };
+          const project = sources[projectId] as {
+            name?: string;
+            _scope?: string;
+            $paymentTermMonths?: number;
+            monthlyVolume?: number;
+            unitPrice?: number;
+            variableCostRate?: number;
+          };
           $('#modal-project-name').val(project.name ?? '');
           $('#modal-scope').val(project._scope ?? '待初始化');
           $('#modal-payment-term-months').val(project.$paymentTermMonths ?? 0);
@@ -253,7 +258,9 @@ function initFatePhone(): void {
         stat_data.companyAccount.monthlyRevenueSources = {};
       }
       const sources = stat_data.companyAccount.monthlyRevenueSources;
-      const projectId = getIsAddMode() ? nextRevenueSourceId(sources) : (getEditingProjectId() ?? nextRevenueSourceId(sources));
+      const projectId = getIsAddMode()
+        ? nextRevenueSourceId(sources)
+        : (getEditingProjectId() ?? nextRevenueSourceId(sources));
       const _monthlyGrossProfit = monthlyVolume * unitPrice * (1 - _.clamp(costRate, 0, 1));
       const existing = sources[projectId] as { _scope?: string; $paymentTermMonths?: number } | undefined;
       sources[projectId] = {
@@ -281,7 +288,9 @@ function initFatePhone(): void {
   const deleteProject = async (projectId: string) => {
     const variables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
     const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
-    const name = (stat_data.companyAccount?.monthlyRevenueSources as Record<string, { name?: string }>)?.[projectId]?.name ?? projectId;
+    const name =
+      (stat_data.companyAccount?.monthlyRevenueSources as Record<string, { name?: string }>)?.[projectId]?.name ??
+      projectId;
     if (!confirm(`确定要删除「${name}」吗？`)) return;
     try {
       if (
@@ -336,15 +345,16 @@ function initFatePhone(): void {
         const crossedMonths = getCrossedMonths(oldCurrentDate, newCurrentDate);
         const currentYMMatch = String(newCurrentDate).match(/(\d{4})-(\d{2})/);
         const currentYM = currentYMMatch ? `${currentYMMatch[1]}-${currentYMMatch[2]}` : '';
-        const { cash: calculatedCompanyCash, receivablesByDueMonth: newReceivables } = processCompanyCashWithReceivables(
-          oldCompanyCash,
-          companyOneTimeChange,
-          crossedMonths,
-          currentYM,
-          oldFixedCosts,
-          oldRunningProjects,
-          oldReceivables,
-        );
+        const { cash: calculatedCompanyCash, receivablesByDueMonth: newReceivables } =
+          processCompanyCashWithReceivables(
+            oldCompanyCash,
+            companyOneTimeChange,
+            crossedMonths,
+            currentYM,
+            oldFixedCosts,
+            oldRunningProjects,
+            oldReceivables,
+          );
         const calculatedPersonalCash = calculatePersonalCash(
           oldPersonalCash,
           personalOneTimeChange,
@@ -396,7 +406,7 @@ function initFatePhone(): void {
     }
   };
 
-  container.on(`click.${EVENTS_NS}`, '.btn-add-project', (e) => {
+  container.on(`click.${EVENTS_NS}`, '.btn-add-project', e => {
     e.stopPropagation();
     openProjectModal();
   });
@@ -410,7 +420,7 @@ function initFatePhone(): void {
     const projectId = $(this).data('project-id');
     if (projectId) deleteProject(projectId);
   });
-  container.on(`click.${EVENTS_NS}`, '.btn-recalculate-cash', (e) => {
+  container.on(`click.${EVENTS_NS}`, '.btn-recalculate-cash', e => {
     e.stopPropagation();
     recalculateCash();
   });
@@ -428,7 +438,7 @@ function initFatePhone(): void {
   $parentDoc.on(`click.${EVENTS_NS}`, '#modal-cancel, #project-modal', function (e) {
     if (e.target === this) closeProjectModal();
   });
-  $parentDoc.on(`click.${EVENTS_NS}`, '#modal-save', (e) => {
+  $parentDoc.on(`click.${EVENTS_NS}`, '#modal-save', e => {
     e.stopPropagation();
     saveProject();
   });
@@ -457,20 +467,20 @@ function initFatePhone(): void {
     isDown = false;
     content.removeClass('grabbing');
   };
-  content.on(`mousedown.${EVENTS_NS}`, (e) => startDrag(e.pageY));
+  content.on(`mousedown.${EVENTS_NS}`, e => startDrag(e.pageY));
   content.on(`mouseleave.${EVENTS_NS}`, stopDrag);
   content.on(`mouseup.${EVENTS_NS}`, stopDrag);
-  content.on(`mousemove.${EVENTS_NS}`, (e) => {
+  content.on(`mousemove.${EVENTS_NS}`, e => {
     if (isDown) {
       e.preventDefault();
       doDrag(e.pageY);
     }
   });
-  content.on(`touchstart.${EVENTS_NS}`, (e) => {
+  content.on(`touchstart.${EVENTS_NS}`, e => {
     if (e.originalEvent?.touches?.[0]) startDrag(e.originalEvent.touches[0].pageY);
   });
   content.on(`touchend.${EVENTS_NS}`, stopDrag);
-  content.on(`touchmove.${EVENTS_NS}`, (e) => {
+  content.on(`touchmove.${EVENTS_NS}`, e => {
     if (isDown && e.originalEvent?.touches?.[0]) doDrag(e.originalEvent.touches[0].pageY);
   });
 
