@@ -36,8 +36,6 @@
 4. 接收**LLM**输出的内容，将其渲染到 SillyTavern 的消息当中
 5. 待SillyTavern接收完全部的LLM输出后，**此扩展**开始对接收的内容进行处理（即处理可见的`<% ... %>`语句块）
 
-
-
 例如，准备的提示词为：
 
 ```javascript
@@ -99,14 +97,14 @@
 
 - `[InitialVariables]`：将条目内容视为变量树，写入到初始消息变量内，仅支持标准`JSON`，且必须是`object`
 
-	> 只有在启用**立即加载世界书**才会生效
-	>
-	> 修改将会重新写入，并覆盖之前的内容
+ > 只有在启用**立即加载世界书**才会生效
+ >
+ > 修改将会重新写入，并覆盖之前的内容
 
 ### 正则表达式语法示例
 
 - `[GENERATE:REGEX:你好]` - 当消息包含"你好"时注入内容
-- `[GENERATE:REGEX:^用户.*]` - 当消息以"用户"开头时注入内容  
+- `[GENERATE:REGEX:^用户.*]` - 当消息以"用户"开头时注入内容
 - `[GENERATE:REGEX:.*问题.*]` - 当消息包含"问题"时注入内容
 - `[GENERATE:REGEX:\\b(help|帮助)\\b]` - 当消息包含"help"或"帮助"单词时注入内容
 
@@ -118,22 +116,23 @@
    - `pattern` 是标准的正则表达式模式
    - 支持所有 JavaScript 正则表达式语法
 
-2. **匹配逻辑**: 
-   
+2. **匹配逻辑**:
+
    - 系统会遍历所有消息内容
    - 当消息内容匹配指定的正则表达式时，会执行对应的世界书条目
+
 - 匹配的内容会注入到对应消息之前
-  
-3. **可用变量**:
+
+1. **可用变量**:
    - `matched_message`: 匹配的消息内容
    - `matched_message_index`: 匹配消息的索引
    - `matched_message_role`: 匹配消息的角色
 
-4. **使用示例**:
-   
+2. **使用示例**:
+
    ```
    世界书条目标题: [GENERATE:REGEX:你好]
-   世界书条目内容: 
+   世界书条目内容:
    检测到问候语！当前消息: <%- matched_message %>
    消息索引: <%- matched_message_index %>
    ```
@@ -235,6 +234,7 @@ format: |-
 ```
 
 和**条目3**：
+
 ```
 花音kanon最心水的牌子是 Mayla Classic
 ```
@@ -259,8 +259,8 @@ format: |-
 
 Sillytavern 在设计上不允许角色卡直接修改提示词预设，本模块提供了直接插入提示词功能的办法。
 
-
 **重要说明**：
+
 - 必须将世界书条目设置为**未激活**状态才会生效
 - 将世界书条目名设置为注入语句，内容则是你需要实际发送的内容
 - 支持EJS模板渲染和正则替换处理
@@ -290,15 +290,18 @@ Sillytavern 在设计上不允许角色卡直接修改提示词预设，本模�
 **语法**：`@INJECT pos=位置,role=角色`
 
 **参数说明**：
+
 - `pos`：插入位置（从1开始，支持负数索引）
 - `role`：插入消息的角色（user/assistant/system）
 
 **示例**：
+
 - `@INJECT pos=1,role=system` - 在第一条消息位置插入系统消息
 - `@INJECT pos=-1,role=user` - 在最后一条消息位置插入用户消息
 - `@INJECT pos=3,role=assistant` - 在第三条消息位置插入助手消息
 
 **零与负数索引说明**：
+
 - `pos=0`：按照第一条消息处理
 - `pos=-1`：最后一条消息位置
 - `pos=-2`：倒数第二条消息位置
@@ -311,17 +314,20 @@ Sillytavern 在设计上不允许角色卡直接修改提示词预设，本模�
 **语法**：`@INJECT target=角色,index=序号,at=位置,role=角色`
 
 **参数说明**：
+
 - `target`：目标角色（user/assistant/system）
 - `index`：目标消息的序号（从1开始，支持负数）
 - `at`：插入位置（before/after，默认为before）
 - `role`：插入消息的角色
 
 **示例**：
+
 - `@INJECT target=user,index=1,at=before,role=system` - 在第一条用户消息前插入系统消息
 - `@INJECT target=assistant,index=-1,at=after,role=user` - 在最后一条助手消息后插入用户消息
 - `@INJECT target=user,role=system` - 在第一条用户消息前插入系统消息（使用默认值）
 
 **负数索引说明**：
+
 - `index=-1`：该角色的最后一条消息
 - `index=-2`：该角色的倒数第二条消息
 
@@ -332,16 +338,19 @@ Sillytavern 在设计上不允许角色卡直接修改提示词预设，本模�
 **语法**：`@INJECT regex=模式,at=位置,role=角色`
 
 **参数说明**：
+
 - `regex`：正则表达式模式（支持单引号包围、双引号包围与无包围）
 - `at`：插入位置（before/after，默认为before）
 - `role`：插入消息的角色
 
 **示例**：
+
 - `@INJECT regex=你好,at=before,role=system` - 在包含"你好"的消息前插入系统消息
 - `@INJECT regex="^用户.*",at=after,role=assistant` - 在以"用户"开头的消息后插入助手消息
 - `@INJECT regex='\\b(help|帮助)\\b',role=system` - 在包含"help"或"帮助"单词的消息前插入系统消息
 
 **正则表达式语法**：
+
 - 支持所有 JavaScript 正则表达式语法
 - 可以使用单引号或双引号包围模式
 - 不区分大小写匹配
@@ -365,33 +374,38 @@ Sillytavern 在设计上不允许角色卡直接修改提示词预设，本模�
 ### 使用示例
 
 #### 示例1：在对话开始插入系统提示
+
 ```
 世界书条目标题: @INJECT pos=0,role=system
-世界书条目内容: 
+世界书条目内容:
 你是一个专业的AI助手，请用友好和专业的语气回答问题。
 ```
 
 #### 示例2：在用户问题后插入上下文
+
 ```
 世界书条目标题: @INJECT target=user,at=after,role=assistant
-世界书条目内容: 
+世界书条目内容:
 基于用户的问题，我提供以下背景信息：
 <%- world_info.content %>
 ```
 
 #### 示例3：根据关键词插入特定内容
+
 ```
 世界书条目标题: @INJECT regex=紧急,role=system
-世界书条目内容: 
+世界书条目内容:
 检测到紧急情况关键词，请注意提供及时和准确的帮助。
 ```
 
 #### 示例4：使用触发概率
+
 ```
 世界书条目标题: @INJECT target=assistant,at=before,role=system,order=5
-世界书条目内容: 
+世界书条目内容:
 这是一个随机触发的提示，只有30%的概率会出现。
 ```
+
 （需要在世界书设置中启用触发概率，设置为30%）
 
 ### 注意事项
@@ -402,7 +416,7 @@ Sillytavern 在设计上不允许角色卡直接修改提示词预设，本模�
 4. **调试信息**：详细的操作日志会输出到浏览器控制台
 5. **错误处理**：无效的正则表达式或找不到目标消息时会输出警告
 
-### 提示词后处理 
+### 提示词后处理
 
 ```
 本注入功能非常强大，但它的最终效果取决于你所连接的 API 对提示词格式的要求。对于像 Gemini 或 Claude 这样使用严格格式的 API，请确保将你最重要的系统级指令（如角色设定）通过 pos=0 或 order 最小的方式，注入到对话的最开头。否则，它们可能会在 SillyTavern 的内置格式化处理中被当作普通用户消息，从而达不到预期的效果。
@@ -417,19 +431,19 @@ Sillytavern 在设计上不允许角色卡直接修改提示词预设，本模�
 > 连续的消息相同role的消息可能被合并
 
 在 `API连接配置` 页，你可以找到提示词后处理选项。它完成了 Sillytavern 格式至 大模型 API要求的格式的转换。
-| | | 
-| --- | --- | 
-Chatgpt | system 消息通常只放一条，位于对话最前，用于设定助手的整体行为。不要求严格两两交替，但如果你插入多条 user，模型就会认为这是用户连续的输入。连续2条 system 也是允许的。system 不硬性要求放在最前面，但强烈建议放在最前面。|
-Gemini | 独立systemInstruction，user/model 严格交替，user 开头，所有 system 消息将被转发至systemInstruction结构 |
-Anthropic Claude | user/assistant 严格交替，最后一条消息通常应该是 user 角色，system 消息可以在任何位置，但通常放在开头最有效 |
-Deepseek | user/assistant 建议交替，最后一条消息必须是 user |
-其他兼容OpenAI的 | 通常同上，但有时将 system 合并到 user 效果更好 |
-本地模型 (Kobold等) | 只需要一个巨大的纯文本块 |
 
+|                     |                                                                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Chatgpt             | system 消息通常只放一条，位于对话最前，用于设定助手的整体行为。不要求严格两两交替，但如果你插入多条 user，模型就会认为这是用户连续的输入。连续2条 system 也是允许的。system 不硬性要求放在最前面，但强烈建议放在最前面。 |
+| Gemini              | 独立systemInstruction，user/model 严格交替，user 开头，所有 system 消息将被转发至systemInstruction结构                                                                                                                   |
+| Anthropic Claude    | user/assistant 严格交替，最后一条消息通常应该是 user 角色，system 消息可以在任何位置，但通常放在开头最有效                                                                                                               |
+| Deepseek            | user/assistant 建议交替，最后一条消息必须是 user                                                                                                                                                                         |
+| 其他兼容OpenAI的    | 通常同上，但有时将 system 合并到 user 效果更好                                                                                                                                                                           |
+| 本地模型 (Kobold等) | 只需要一个巨大的纯文本块                                                                                                                                                                                                 |
 
 你可以在以下链接找到提示词后处理的详细说明：
 
-https://docs.sillytavern.app/usage/api-connections/openai/#prompt-post-processing
+<https://docs.sillytavern.app/usage/api-connections/openai/#prompt-post-processing>
 
 ---
 
@@ -443,7 +457,7 @@ https://docs.sillytavern.app/usage/api-connections/openai/#prompt-post-processin
 
 - `LAST_SEND_CHARS`上次生成发送的文本长度
 
-	**以下并非实际输出消耗的词符（tokens）数量，应该以酒馆内置的词符计数为准**
+ **以下并非实际输出消耗的词符（tokens）数量，应该以酒馆内置的词符计数为准**
 
 - `LAST_RECEIVE_TOKENS`上次生成输出的词符（tokens）数量
 
@@ -491,13 +505,9 @@ line 3
 
 各个设置选项的说明
 
-
-
 ### 是否启用扩展
 
 扩展的总开关，关闭将会禁用扩展除了命令以外的所有功能，`<% ... %>`语句将会原样发送给LLM
-
-
 
 ### 处理生成内容
 
@@ -505,21 +515,15 @@ line 3
 
 之后的选项会受到此项的影响，禁用此项接下来的选项也将视为禁用
 
-
-
 #### 生成时注入 [GENERATE] 世界书条目
 
 在生成时会遍历**所有已启用**的世界书中的条目，然后筛选出带有`[GENERATE:*]`前缀的条目来进行处理
 
 这个过程会先进行排序，然后按顺序依次进行处理
 
-
-
 #### 生成时注入 @INJECT 世界书条目
 
 见 [Prompt 注入](#Prompt 注入)
-
-
 
 ### 处理楼层消息
 
@@ -527,21 +531,15 @@ line 3
 
 之后的选项会受到此项的影响，禁用此项接下来的选项也将视为禁用
 
-
-
 #### 渲染楼层时注入 [RENDER] 世界书条目
 
 在生成时会遍历**所有已启用**的世界书中的条目，然后筛选出带有`[RENDER:*]`前缀的条目来进行处理
 
 这个过程会先进行排序，然后按顺序依次进行处理
 
-
-
 #### 处理代码块
 
 允许对代块`<pre>`内容进行模板处理
-
-
 
 #### 处理原始消息内容
 
@@ -553,13 +551,9 @@ line 3
 >
 > 会永久修改消息内容
 
-
-
 #### 生成时忽略楼层消息处理
 
 在生成前将楼层内所有的`<% ... %>`语句进行隐藏，避免将其发送到生成阶段进行处理
-
-
 
 ### 自动保存变量更新
 
@@ -567,13 +561,9 @@ line 3
 
 > 开启时会导致额外的性能消耗，而且酒馆本身能够自动保存，因此一般不需要开启
 
-
-
 立即加载世界书
 
 在打开角色卡/聊天后，立即加载所有启用的世界书，并对内容进行模板处理
-
-
 
 ### 禁用with语句块
 
@@ -581,35 +571,29 @@ line 3
 
 启用此选项后将会禁用这个语句，改为`const variables, ...`形式的参数解包
 
-
-
 ### 控制台显示详细信息
 
 开启后，控制台将会输出大量的调试信息
-
-
 
 ### GENERATE/RENDER/INJECT条目禁用视为启用
 
 - 作用范围：
 
-	> 所有特殊条目，即由扩展控制的条目
-	>
-	> 例如：[GENERATE]、[RENDER]、`@@generate`、`@@render`等
+ > 所有特殊条目，即由扩展控制的条目
+ >
+ > 例如：[GENERATE]、[RENDER]、`@@generate`、`@@render`等
 
 - 开启时：
 
-	> 这些特殊条目只有在 **禁用** 时才会被扩展处理
+ > 这些特殊条目只有在 **禁用** 时才会被扩展处理
 
 - 关闭时：
 
-	> 这些特殊条目只有在 **启用** 时才会被扩展处理
+ > 这些特殊条目只有在 **启用** 时才会被扩展处理
 
 开启后兼容旧设定，即「特殊条目需要**禁用**才会生效」
 
 关闭后使用新设定，即「特殊条目需要**启用**才会生效」
-
-
 
 ### 后台编译
 
@@ -617,15 +601,11 @@ line 3
 
 可以缓解页面卡顿的问题
 
-
-
 ### 环境隔离
 
 将执行缓解与全局环境隔离，避免环境污染
 
 启用会消耗额外性能
-
-
 
 ### 缓存（实验性）
 
@@ -633,13 +613,9 @@ line 3
 
 但是，由于缓存的原样，有时候也会导致缓存后的提示词无法被更新
 
-
-
 ### 缓存大小
 
 控制缓存池的大小
-
-
 
 ### 缓存Hash函数
 
@@ -654,8 +630,6 @@ line 3
 例如，我们可以在**预设**里面导入由世界书定义的**CoT**，将这些**CoT**放置到预设的**CoT**区块里面
 
 因为LLM对于有格式、紧凑的提示词有着更强的注意力，如果使用传统的世界书来添加自定义CoT，将会导致LLM注意力涣散，要么忽略预设的CoT，要么忽略世界书的CoT
-
-
 
 例如，我们在世界书里这样写
 
@@ -730,8 +704,6 @@ Q: 变化后的好感度是多少？
 - `@@if`：对条件进行检查，如果结果为`false`，则排除这个条目
 - `@@iframe`：为`@@render_before`或者`@@render_after`创建一个`iframe`标签包裹起来，避免样式污染到全局
 - `@@preprocessing`：在酒馆处理世界书之前，先由这个扩展处理
-
-
 
 一般用法：
 
@@ -864,11 +836,11 @@ Q: 变化后的好感度是多少？
 <%
     // 将 {{getvars::...}} 替换为变量内容
     activateRegex(/\{\{\getvars::([a-zA-Z0-9_]+?)}\}/gi, function(match, varName) {
-    	return this.getvar(varName);
-	}, {
-    	// 生成时生效
-    	generate: true
-	});
+     return this.getvar(varName);
+ }, {
+     // 生成时生效
+     generate: true
+ });
 %>
 ```
 
@@ -888,20 +860,20 @@ Q: 变化后的好感度是多少？
 <%
     // 将 <Variables> 块的内容作为变量，更新楼层变量
     activateRegex(/<Variables>([\s\S]+?)<\/Variables>/gi, function(match, variables) {
-    	const self = this;
-    	variables
-            .split("\n")	// 按行分割
+     const self = this;
+     variables
+            .split("\n") // 按行分割
             .filter(x => x.includes(":")) // 检查格式
-    		.map(x => x.split(":", 2))	// 拆分键值
-    		.forEach(([k, v]) => self.setvar(k.trim(), v.trim()));	// 写入变量
-    	
-    	// 删除变量块
-    	return "";
-	}, {
-    	// 楼层消息生效
-    	// 默认 before 为 true,
-    	message: true,
-	});
+      .map(x => x.split(":", 2)) // 拆分键值
+      .forEach(([k, v]) => self.setvar(k.trim(), v.trim())); // 写入变量
+
+     // 删除变量块
+     return "";
+ }, {
+     // 楼层消息生效
+     // 默认 before 为 true,
+     message: true,
+ });
 %>
 ```
 
@@ -913,8 +885,8 @@ Q: 变化后的好感度是多少？
 
 ```javascript
 <%_
-	// 替换 catbox 图床链接为反代，解决无法加载图片的问题
-	activateRegex(
+ // 替换 catbox 图床链接为反代，解决无法加载图片的问题
+ activateRegex(
         /files\.catbox\.moe/gi,
         'catbox.***.net',
         {
@@ -992,13 +964,13 @@ _%>
 ```javascript
 @@generate_before
 <%
-	for(const event of (variables.world.events ?? [])) {
+ for(const event of (variables.world.events ?? [])) {
         await activewi(`[EVENT] ${event}`);
     }
 %>
 ```
 
-> `@@generate_before `装饰器的效果等同于`[GENERATE:BEFORE]`
+> `@@generate_before`装饰器的效果等同于`[GENERATE:BEFORE]`
 
 ### 通过预处理世界书条目实现原生递归🟢关键字激活
 
@@ -1008,7 +980,7 @@ _%>
 
 - 在条目标题添加 `[Preprocessing]`
 
-	> 例如 `[Preprocessing] 世界书激活器`
+ > 例如 `[Preprocessing] 世界书激活器`
 
 - 在条目内添加装饰器 `@@preprocessing`
 
@@ -1089,42 +1061,3 @@ _%>
 @@if variables.哈基米.好感度 > 50 && variables.哈基米.好感度 < 90
 哈基米认为{{user}}是朋友
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
