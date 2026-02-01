@@ -90,6 +90,11 @@ export const Schema = z.object({
               .transform(v => _.clamp(v, 0, 1))
               .prefault(0.3)
               .describe('每单位销售的可变成本占比，0.0~1.0'),
+            $paymentTermMonths: z.coerce
+              .number()
+              .min(0)
+              .prefault(0)
+              .describe('账期月数：该收入发生月后多少个月到账，0 表示当月到账'),
             _monthlyGrossProfit: z.coerce.number().prefault(0).describe('由脚本计算：月销量 * 单价 * (1 - 可变成本率)'),
           }),
         )
@@ -97,6 +102,12 @@ export const Schema = z.object({
         .describe(
           '公司每月经营性收入来源。Key 必须为固定 ID（如 id_1、id_2），勿用业务名称作 Key；业务显示名写在每条 name 字段',
         ),
+
+      // 应收账款池：按到期年月(YYYY-MM)汇总，由脚本在跨月时记账、当前月收款并销账
+      $receivablesByDueMonth: z
+        .record(z.string().regex(/^\d{4}-\d{2}$/), z.coerce.number())
+        .prefault({})
+        .describe('按到期年月(YYYY-MM)汇总的应收账款，由脚本根据账期计算并更新'),
 
       // 月度固定支出：每月固定成本，与个人账户「月度固定支出」对称
       monthlyFixedExpenses: z
@@ -119,6 +130,7 @@ export const Schema = z.object({
 
       oneTimeCompanyChange: z.coerce.number().prefault(0).describe('本轮非经营性资金流动（正数=收入，负数=支出）'),
 
+      // === 只读（脚本计算）===
       _cash: z.coerce.number().prefault(0),
     })
     .prefault({}),

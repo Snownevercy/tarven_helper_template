@@ -6,9 +6,10 @@
 import { waitUntil } from 'async-wait-until';
 import { Schema } from '../../schema';
 import {
-  calculateCompanyCash,
   calculateMonthCrossing,
   calculatePersonalCash,
+  getCrossedMonths,
+  processCompanyCashWithReceivables,
 } from './calc';
 import {
   CHECK_READY_INTERVAL_MS,
@@ -40,6 +41,14 @@ const MODAL_HTML = `
       <div class="form-group">
         <label class="form-label">业务显示名称</label>
         <input type="text" id="modal-project-name" class="form-input" placeholder="如：影视制作、代言商务" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">业务范围 (_scope)</label>
+        <input type="text" id="modal-scope" class="form-input" placeholder="该业务线涵盖的范围与定义，如：影视制作、代言商务" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">账期月数 ($paymentTermMonths)</label>
+        <input type="number" id="modal-payment-term-months" class="form-input" placeholder="0" min="0" step="1" title="0=当月到账" />
       </div>
       <div class="form-group">
         <label class="form-label">月销量/规模</label>
@@ -180,8 +189,10 @@ function initFatePhone(): void {
         const stat_data = Schema.parse(_.get(variables, 'stat_data', {}));
         const sources = stat_data.companyAccount?.monthlyRevenueSources;
         if (sources && typeof sources === 'object' && sources[projectId]) {
-          const project = sources[projectId] as { name?: string; monthlyVolume?: number; unitPrice?: number; variableCostRate?: number };
+          const project = sources[projectId] as { name?: string; _scope?: string; $paymentTermMonths?: number; monthlyVolume?: number; unitPrice?: number; variableCostRate?: number };
           $('#modal-project-name').val(project.name ?? '');
+          $('#modal-scope').val(project._scope ?? '待初始化');
+          $('#modal-payment-term-months').val(project.$paymentTermMonths ?? 0);
           $('#modal-monthly-sales').val(project.monthlyVolume ?? 0);
           $('#modal-price').val(project.unitPrice ?? 0);
           $('#modal-cost-rate').val(project.variableCostRate ?? 0.3);
@@ -191,6 +202,8 @@ function initFatePhone(): void {
       }
     } else {
       $('#modal-project-name').val('');
+      $('#modal-scope').val('待初始化');
+      $('#modal-payment-term-months').val('0');
       $('#modal-monthly-sales').val('');
       $('#modal-price').val('');
       $('#modal-cost-rate').val('0.3');
@@ -211,12 +224,18 @@ function initFatePhone(): void {
     const monthlyVolume = parseFloat(String($('#modal-monthly-sales').val() || '0'));
     const unitPrice = parseFloat(String($('#modal-price').val() || '0'));
     const costRate = parseFloat(String($('#modal-cost-rate').val() || '0.3'));
+    const scope = String($('#modal-scope').val() || '').trim() || '待初始化';
+    const paymentTermMonths = parseFloat(String($('#modal-payment-term-months').val() || '0'));
     if (isNaN(monthlyVolume) || isNaN(unitPrice) || isNaN(costRate)) {
       toastr.warning('请输入有效的数值');
       return;
     }
     if (costRate < 0 || costRate > 1) {
       toastr.warning('可变成本率必须在0-1之间');
+      return;
+    }
+    if (isNaN(paymentTermMonths) || paymentTermMonths < 0) {
+      toastr.warning('账期月数不能为负数');
       return;
     }
     try {
@@ -236,13 +255,14 @@ function initFatePhone(): void {
       const sources = stat_data.companyAccount.monthlyRevenueSources;
       const projectId = getIsAddMode() ? nextRevenueSourceId(sources) : (getEditingProjectId() ?? nextRevenueSourceId(sources));
       const _monthlyGrossProfit = monthlyVolume * unitPrice * (1 - _.clamp(costRate, 0, 1));
-      const existing = sources[projectId] as { _scope?: string } | undefined;
+      const existing = sources[projectId] as { _scope?: string; $paymentTermMonths?: number } | undefined;
       sources[projectId] = {
         name,
-        _scope: existing?._scope ?? '待初始化',
+        _scope: scope || '待初始化',
         monthlyVolume,
         unitPrice,
         variableCostRate: _.clamp(costRate, 0, 1),
+        $paymentTermMonths: Math.max(0, Math.floor(paymentTermMonths)),
         _monthlyGrossProfit,
       };
       _.set(variables, 'stat_data', stat_data);
@@ -297,6 +317,7 @@ function initFatePhone(): void {
       const companyOneTimeChange = _.get(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
       const oldFixedCosts = _.get(oldStatData, 'companyAccount.monthlyFixedExpenses', {});
       const oldRunningProjects = _.get(oldStatData, 'companyAccount.monthlyRevenueSources', {});
+      const oldReceivables = _.get(oldStatData, 'companyAccount.$receivablesByDueMonth', {}) as Record<string, number>;
       const oldPersonalCash = _.get(oldStatData, 'personalAccount._cash', 0);
       const personalOneTimeChange = _.get(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
       const oldMonthlyIncome = _.get(oldStatData, 'personalAccount.monthlyFixedIncome', 0);
@@ -312,12 +333,17 @@ function initFatePhone(): void {
 
       if (datesValid) {
         const monthCrossing = calculateMonthCrossing(oldCurrentDate, newCurrentDate);
-        const calculatedCompanyCash = calculateCompanyCash(
+        const crossedMonths = getCrossedMonths(oldCurrentDate, newCurrentDate);
+        const currentYMMatch = String(newCurrentDate).match(/(\d{4})-(\d{2})/);
+        const currentYM = currentYMMatch ? `${currentYMMatch[1]}-${currentYMMatch[2]}` : '';
+        const { cash: calculatedCompanyCash, receivablesByDueMonth: newReceivables } = processCompanyCashWithReceivables(
           oldCompanyCash,
           companyOneTimeChange,
-          monthCrossing,
+          crossedMonths,
+          currentYM,
           oldFixedCosts,
           oldRunningProjects,
+          oldReceivables,
         );
         const calculatedPersonalCash = calculatePersonalCash(
           oldPersonalCash,
@@ -327,6 +353,7 @@ function initFatePhone(): void {
           oldMonthlyExpense,
         );
         _.set(currentStatData, 'companyAccount._cash', calculatedCompanyCash);
+        _.set(currentStatData, 'companyAccount.$receivablesByDueMonth', newReceivables);
         _.set(currentStatData, 'personalAccount._cash', calculatedPersonalCash);
         _.set(currentVariables, 'stat_data', currentStatData);
         await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
@@ -386,6 +413,14 @@ function initFatePhone(): void {
   container.on(`click.${EVENTS_NS}`, '.btn-recalculate-cash', (e) => {
     e.stopPropagation();
     recalculateCash();
+  });
+
+  container.on(`click.${EVENTS_NS}`, '.receivables-detail-toggle', function (e) {
+    e.stopPropagation();
+    const $list = $(this).next('.receivables-detail-list');
+    const visible = $list.is(':visible');
+    $list.toggle();
+    $(this).text(visible ? '▼ 查看明细' : '▲ 收起明细');
   });
 
   // 模态框在父页 body 上，须在父页 document 上绑定事件，否则 iframe 内 document 收不到点击

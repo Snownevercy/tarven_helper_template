@@ -10,10 +10,11 @@
 
 import {
   calculateAge,
-  calculateCompanyCash,
   calculateMonthCrossing,
   calculateMonthlyProfit,
   calculatePersonalCash,
+  getCrossedMonths,
+  processCompanyCashWithReceivables,
 } from './calc';
 
 interface ProjectWithProfit {
@@ -22,6 +23,7 @@ interface ProjectWithProfit {
   monthlyVolume?: number;
   unitPrice?: number;
   variableCostRate?: number;
+  $paymentTermMonths?: number;
 }
 
 export function setupReadonlyFields(): void {
@@ -84,11 +86,11 @@ export function setupReadonlyFields(): void {
 
     if (old_personal_cash !== undefined) {
       const calculatedPersonalCash = calculatePersonalCash(
-        old_personal_cash,
-        personalOneTimeChange,
+        Number(old_personal_cash),
+        Number(personalOneTimeChange) || 0,
         monthCrossing,
-        old_monthly_income,
-        old_monthly_expense,
+        Number(old_monthly_income) || 0,
+        Number(old_monthly_expense) || 0,
       );
       _.set(new_stat_data, 'personalAccount._cash', calculatedPersonalCash);
       const monthlyIncome = Number(old_monthly_income) || 0;
@@ -105,48 +107,53 @@ export function setupReadonlyFields(): void {
       }
     }
 
-    // 计算并保护 companyAccount._cash
+    // 计算并保护 companyAccount._cash 与 companyAccount.$receivablesByDueMonth（账期逻辑）
     const old_company_cash = _.get(old_stat_data, 'companyAccount._cash');
     const companyOneTimeChange = _.get(new_stat_data, 'companyAccount.oneTimeCompanyChange');
     const old_fixed_costs = _.get(old_stat_data, 'companyAccount.monthlyFixedExpenses');
     const old_running_projects = _.get(old_stat_data, 'companyAccount.monthlyRevenueSources');
+    const old_receivables = _.get(old_stat_data, 'companyAccount.$receivablesByDueMonth', {}) as Record<string, number>;
 
     if (old_company_cash !== undefined) {
-      const payrollCost = Number(_.get(old_fixed_costs, 'payroll')) || 0;
-      const facilityCost = Number(_.get(old_fixed_costs, 'facilityCost')) || 0;
-      const marketingCost = Number(_.get(old_fixed_costs, 'marketingBudget')) || 0;
-      const otherCost = Number(_.get(old_fixed_costs, 'other')) || 0;
-      const totalFixedCost = payrollCost + facilityCost + marketingCost + otherCost;
+      const crossedMonths = getCrossedMonths(String(old_current_date ?? ''), String(new_current_date ?? ''));
+      const currentYMMatch = new_current_date && String(new_current_date).match(/(\d{4})-(\d{2})/);
+      const currentYM: string = currentYMMatch ? `${currentYMMatch[1]}-${currentYMMatch[2]}` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-      let totalMonthlyProfit = 0;
-      const projectProfits: Record<string, number> = {};
-      if (old_running_projects && typeof old_running_projects === 'object') {
-        for (const projectId in old_running_projects) {
-          const project = old_running_projects[projectId] as ProjectWithProfit;
+      const { cash: calculatedCash, receivablesByDueMonth: newReceivables } = processCompanyCashWithReceivables(
+        Number(old_company_cash),
+        Number(companyOneTimeChange) || 0,
+        crossedMonths,
+        currentYM,
+        (old_fixed_costs || {}) as Record<string, unknown>,
+        (old_running_projects || {}) as Record<string, { _monthlyGrossProfit?: number; $paymentTermMonths?: number }>,
+        old_receivables,
+      );
+      _.set(new_stat_data, 'companyAccount._cash', Number(calculatedCash));
+      _.set(new_stat_data, 'companyAccount.$receivablesByDueMonth', newReceivables);
+
+      if (crossedMonths.length === 0) {
+        console.info(
+          `[状态栏-只读字段] 计算公司现金(未跨月): 旧现金=${old_company_cash}, 一次性变动=${companyOneTimeChange}, 新现金=${calculatedCash}`,
+        );
+      } else {
+        const payrollCost = Number(_.get(old_fixed_costs, 'payroll')) || 0;
+        const facilityCost = Number(_.get(old_fixed_costs, 'facilityCost')) || 0;
+        const marketingCost = Number(_.get(old_fixed_costs, 'marketingBudget')) || 0;
+        const otherCost = Number(_.get(old_fixed_costs, 'other')) || 0;
+        const totalFixedCost = payrollCost + facilityCost + marketingCost + otherCost;
+        let totalMonthlyProfit = 0;
+        const projectProfits: Record<string, number> = {};
+        const runningProjectsForLog = (old_running_projects && typeof old_running_projects === 'object' ? old_running_projects : {}) as Record<string, ProjectWithProfit>;
+        for (const projectId in runningProjectsForLog) {
+          const project = runningProjectsForLog[projectId];
           if (project && typeof project === 'object' && '_monthlyGrossProfit' in project) {
             const monthlyProfit = Number(project._monthlyGrossProfit) || 0;
             totalMonthlyProfit += monthlyProfit;
             projectProfits[projectId] = monthlyProfit;
           }
         }
-      }
-
-      const calculatedCash = calculateCompanyCash(
-        old_company_cash,
-        companyOneTimeChange,
-        monthCrossing,
-        old_fixed_costs as Record<string, unknown>,
-        old_running_projects as Record<string, { _monthlyGrossProfit?: number }>,
-      );
-      _.set(new_stat_data, 'companyAccount._cash', calculatedCash);
-
-      if (monthCrossing === 0) {
         console.info(
-          `[状态栏-只读字段] 计算公司现金(未跨月): 旧现金=${old_company_cash}, 一次性变动=${companyOneTimeChange}, 新现金=${calculatedCash}`,
-        );
-      } else {
-        console.info(
-          `[状态栏-只读字段] 计算公司现金(跨${monthCrossing}个月): 旧现金=${old_company_cash}, 一次性变动=${companyOneTimeChange}, 月度固定支出=${totalFixedCost}(payroll${payrollCost}+facility${facilityCost}+marketing${marketingCost}+other${otherCost}), 月毛利总和=${totalMonthlyProfit}, 新现金=${calculatedCash}`,
+          `[状态栏-只读字段] 计算公司现金(账期,跨${crossedMonths.length}个月): 旧现金=${old_company_cash}, 一次性变动=${companyOneTimeChange}, 月度固定支出=${totalFixedCost}, 月毛利总和=${totalMonthlyProfit}, 新现金=${calculatedCash}, 应收账款键数=${Object.keys(newReceivables).length}`,
         );
         if (Object.keys(projectProfits).length > 0) {
           console.info(
@@ -159,14 +166,13 @@ export function setupReadonlyFields(): void {
     }
 
     // 计算并保护 companyAccount.monthlyRevenueSources.${id}._monthlyGrossProfit 和 _scope
-    const new_running_projects = _.get(new_stat_data, 'companyAccount.monthlyRevenueSources');
+    const new_running_projects = _.get(new_stat_data, 'companyAccount.monthlyRevenueSources') as Record<string, ProjectWithProfit> | undefined;
     if (new_running_projects && typeof new_running_projects === 'object') {
-      const old_running_projects_for_scope =
-        old_running_projects && typeof old_running_projects === 'object' ? old_running_projects : {};
+      const old_running_projects_for_scope = (old_running_projects && typeof old_running_projects === 'object' ? old_running_projects : {}) as Record<string, ProjectWithProfit>;
 
       for (const projectId in new_running_projects) {
-        const new_project = new_running_projects[projectId] as ProjectWithProfit;
-        const old_project = (old_running_projects_for_scope as Record<string, ProjectWithProfit>)[projectId];
+        const new_project = new_running_projects[projectId];
+        const old_project = old_running_projects_for_scope[projectId];
 
         if (new_project && typeof new_project === 'object') {
           if (old_project && typeof old_project === 'object' && '_scope' in old_project) {

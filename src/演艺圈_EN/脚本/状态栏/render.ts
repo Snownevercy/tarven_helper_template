@@ -80,6 +80,8 @@ export function getVal<T = unknown>(data: SchemaData | null | undefined, path: s
 
 interface MonthlyRevenueSource {
   name?: string;
+  _scope?: string;
+  $paymentTermMonths?: number;
   monthlyVolume?: number;
   unitPrice?: number;
   _monthlyGrossProfit?: number;
@@ -262,6 +264,28 @@ export const renderModules: Record<string, (sd: SchemaData) => string> = {
 
     const monthlyNetProfit = totalMonthlyProfit - totalFixedCost;
 
+    const receivablesByDueMonth = getVal(sd, 'companyAccount.$receivablesByDueMonth', {} as Record<string, number>);
+    const receivablesObj = typeof receivablesByDueMonth === 'object' && receivablesByDueMonth !== null ? receivablesByDueMonth : {};
+    const totalReceivables = Object.values(receivablesObj).reduce((s, v) => s + Number(v || 0), 0);
+    const currentDateStr = String(getVal(sd, 'world.currentDate', ''));
+    const currentYMMatch = currentDateStr.match(/(\d{4})-(\d{2})/);
+    let nextYM = '';
+    if (currentYMMatch) {
+      const y = parseInt(currentYMMatch[1], 10);
+      const m = parseInt(currentYMMatch[2], 10);
+      if (m === 12) nextYM = `${y + 1}-01`;
+      else nextYM = `${y}-${String(m + 1).padStart(2, '0')}`;
+    }
+    const nextMonthAmount = nextYM ? (Number(receivablesObj[nextYM]) || 0) : 0;
+    const receivablesDetailRows = Object.keys(receivablesObj)
+      .filter(k => /^\d{4}-\d{2}$/.test(k))
+      .sort()
+      .map(ym => `<div class="info-row"><span class="info-key">${ym} 到期</span><span class="info-val" style="color:#4a9;">¥${Number(receivablesObj[ym]).toLocaleString()}</span></div>`)
+      .join('');
+    const receivablesDetailHtml = receivablesDetailRows
+      ? `<div class="receivables-detail-list" style="display:none; margin-top:6px;">${receivablesDetailRows}</div>`
+      : '<div class="receivables-detail-list" style="display:none; margin-top:6px; font-size:10px; color:#555;">暂无明细</div>';
+
     return `
         <div class="card">
             <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
@@ -275,6 +299,13 @@ export const renderModules: Record<string, (sd: SchemaData) => string> = {
             <div class="card-title">月度收入来源</div>
             ${projectsList}
             <div class="btn-add btn-add-project">+ 新增收入来源</div>
+        </div>
+        <div class="card">
+            <div class="card-title">应收账款</div>
+            <div class="info-row"><span class="info-key">应收账款总数</span><span class="info-val" style="color:#4a9; font-weight:700;">¥${totalReceivables.toLocaleString()}</span></div>
+            <div class="info-row"><span class="info-key">下月到账</span><span class="info-val" style="color:#4a9;">¥${nextMonthAmount.toLocaleString()}</span></div>
+            <div class="receivables-detail-toggle" style="cursor:pointer; font-size:10px; color:#888; margin-top:6px;">▼ 查看明细</div>
+            ${receivablesDetailHtml}
         </div>
         <div class="card">
             <div class="card-title">月度固定支出 <span style="font-size:8px; color:#666; font-weight:400;">(合计: ¥${totalFixedCost.toLocaleString()}/月)</span></div>
