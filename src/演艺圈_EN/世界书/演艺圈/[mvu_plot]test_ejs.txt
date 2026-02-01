@@ -1,0 +1,6 @@
+<test>
+#仅用于测试ejs是否在提示词中生效
+'当前 companyAccount.monthlyRevenueSources 下已有的 key 为：<%= (function(v){ return Object.keys(v && typeof v === "object" && !Array.isArray(v) ? v : {}).join("、"); })(_.get(variables || {}, "stat_data.companyAccount.monthlyRevenueSources")) %>。仅可对以上 key 使用 replace 更新；禁止对未列出的 key 进行 replace 或 insert。'
+- 'companyAccount.monthlyRevenueSources 仅可对以下 path 使用 replace（path 须以其中一条开头）：<%= (function(keys){ return keys.map(function(k){ return "/stat_data/companyAccount/monthlyRevenueSources/" + k; }).join("；"); })((function(v){ return Object.keys(v && typeof v === "object" && !Array.isArray(v) ? v : {}); })(_.get(variables || {}, "stat_data.companyAccount.monthlyRevenueSources"))) %>。禁止对未列出的 key 使用 insert 或 replace。'
+
+</test>

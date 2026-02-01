@@ -1,0 +1,148 @@
+---
+变量更新规则:
+  # --- 世界环境 ---
+  world:
+    currentDate:
+      format: YYYY-MM-DD 周X HH:mm
+      check:
+        - '严禁时间倒流或无故跳跃。'
+    currentLocation:
+      check:
+        - '格式建议：国家-城市-具体位置（如：中国-北京-三里屯）。'
+    ${eraNews|industryNews|gossipNews}:
+      check:
+        - '[时间戳生成准则] 1.定点事件=YYYY-MM-DD；2.月度事件=YYYY-MM；3.年度趋势=YYYY。'
+        - "[eraNews] 发生新的大事件时更新。若变量为'待初始化'或'无'或原新闻已过时（>30天），必须检索当前时间点的大事件进行更新。"
+        - "[industryNews] 发生高热度娱乐圈事件时更新。若变量为'待初始化'或'无'或原新闻已过时（>15天），必须检索当前时间点的娱乐圈事件进行更新。"
+        - "[gossipNews] 发生高热度娱乐八卦新闻时更新。若变量为'待初始化'或'无'或原新闻已过时（>7天），必须检索当前时间点的娱乐八卦新闻进行更新。"
+        - '更新内容必须基于 currentDate 所对应的真实历史年份，严禁捏造或死守预设年份。'
+
+  # --- 主角档案 ---
+  protagonist:
+    appearance:
+      check:
+        - '在开场白或初次描写时录入主角的外貌特征。'
+        - '后续仅在发生永久性显著改变（如毁容、整容、明显衰老）时更新，不要因为更换衣物而修改。'
+    ${name|occupation|kink}:
+      check:
+        - '基础资料通常保持稳定，仅在剧情明确发生变化时更新。'
+        - '[kink] 为隐藏变量，通常在开场白或初次描写时录入，用于后续剧情生成导向。'
+
+  # --- 作品与成就 ---
+  career:
+    ${works|industryAwards}:
+      type: string[]
+      check:
+        - 仅在主角发布新作品或获得正式奖项时向数组追加新条目
+        - '仅收录主角作为核心主创（导演/主演/编剧/制片）的作品。'
+        - 格式应为"《作品名》"或"奖项名称(年份)"
+
+  # --- 行业评估 ---
+  professionalAssessment:
+    currentTier:
+      check:
+        - '综合 fanbase、career 与 personalAccount 进行评定。'
+        - '等级参考：素人 -> 十八线 -> 三线 -> 二线 -> 一线 -> 顶流 -> 巨星。'
+    ${mediaSentiment|publicReputation|fanbase}:
+      check:
+        - '当主角发布新作品、展示才艺或发生行业互动时，必须重新评估 fanbase。'
+        - '随着主角发布作品、卷入舆论事件或进行公开活动后动态调整 mediaSentiment 与 publicReputation。'
+        - '[mediaSentiment] 侧重官方/主流媒体的态度（如：力捧/打压/观望）。'
+        - '[publicReputation] 侧重大众/网友的口碑（如：国民老公/全网黑/实力派）。'
+
+  # --- 个人账户 ---
+  personalAccount:
+    ${monthlyFixedIncome|monthlyFixedExpense}:
+      type: number
+      check:
+        - 当主角的生活水平、薪资结构或长期负债发生结构性变化时调整
+        - '⚠️ 个人一次性收支（如买车、买房、片酬入账、代言费等）不计入此字段，走 oneTimePersonalChange。'
+    oneTimePersonalChange:
+      type: number
+      check:
+        - 记录本轮剧情中发生的个人账户的一次性大额收支
+        - '适用场景：片酬到账、代言费、分红收入、购买资产、大额消费等。'
+        - '若本轮既有收入又有支出，填写净值即可。'
+        - '严禁混淆公私账户：公司盈利属于公司，只有通过分红/发工资才能流入个人账户。'
+    contractStatus:
+      check:
+        - '记录当前经纪合约状态，用于判断咖位。'
+        - '格式：「公司名+年限+类型」如「华谊兄弟3年独家」'
+        - "无合约填「无」或「待初始化」，解约后填「无（原华谊）」"
+    assets.${realEstate|vehicles|stocks}:
+      type: string[]
+      check:
+        - '格式：「资产描述@数量@购入总价」'
+        - '⚠️ 金额统一使用人民币，外币资产需换算。'
+        - '出售资产时删除对应条目，所得计入 oneTimePersonalChange。'
+
+  # --- 公司账户 ---
+  companyAccount:
+    monthlyRevenueSources:
+      type: |-
+        {
+          [id: string]: { // id 必须为 id_1、id_2、id_3 ... 等稳定 ID，勿用业务名当 key
+            name: string; // 业务显示名称，如「影视制作」「代言商务」
+            monthlyVolume: number; // 随剧情经营状况波动
+            unitPrice: number; // 定价策略调整时更新
+            variableCostRate: number; // 0.0~1.0，随供应链或渠道成本变化
+          }
+        }
+      check:
+        - '现有companyAccount.monthlyRevenueSources的对应key为：<%= (function(v){ return Object.keys(v && typeof v === "object" && !Array.isArray(v) ? v : {}).join("、"); })(_.get(variables || {}, "stat_data.companyAccount.monthlyRevenueSources")) %>'
+        - '根据剧情的变动,可对以上 key 使用 replace 更新monthlyVolume；禁止对未列出的 key 进行 replace 或 insert。'
+        - 若业务线被砍掉，则从记录中 remove该条key
+    monthlyFixedExpenses.${payroll|facilityCost|marketingBudget|other}:
+      type: number
+      check:
+        - '[payroll] 当招聘/裁员时更新。'
+        - '[facilityCost] 当搬迁办公室或签订新租约时更新。'
+        - '[marketingBudget] 每月固定营销支出（广告、推广等）。⚠️ 大型一次性营销活动应走 oneTimeCompanyChange。'
+        - '[other] 其他每月固定支出，如软件订阅、设备租赁/折旧、保险等。'
+    oneTimeCompanyChange:
+      type: number
+      check:
+        - '⚠️ **仅记录本轮发生的公账一次性变动资金流动**（如融资到账、购买设备、赔偿金、大型一次性营销活动等）'
+        - 收入为正，支出为负；若无变动则重置为 0
+
+  # --- 社交网络 ---
+  network:
+    socialMap:
+      type: string[]
+      check:
+        - '概括主角当前的社交圈层（如：京圈、沪圈、电影学院派、煤老板圈）。'
+        - '当主角成功打入新圈子或被踢出圈子时更新。'
+    relationshipBook:
+      type: |-
+        {
+          [NPC姓名: string]: number // range: -100~100
+        }
+      check:
+        - '仅在发生有意义的交互（争吵、合作、调情、背叛等）时更新'
+        - '[入库防火墙 - 必须严格执行的过滤程序]:'
+        - '1. 实名制认证: 仅收录具备[真实全名]的NPC。严禁收录通用代称。'
+        - '2. 价值门槛: 仅当该NPC具备[社会影响力]或与主角发生[有效利益交换]时才可入库。'
+        - '3. 必须执行: 若交互对象为功能性路人，无论人脉值如何变化，严禁写入此变量。'
+        - '[数值逻辑]:'
+        - '  (++) 深度绑定: 救命/犯罪/重大利益 (+15~30)。'
+        - '  (+) 普通好感: 合作/受惠/吹捧 (+2~10)。'
+        - '  (-) 利益摩擦: 抢夺/冒犯/嫉妒 (-2~10)。'
+        - '  (--) 死敌仇恨: 挡路/夺妻/背叛 (-15~30)。'
+    recentInteractions:
+      type: string[]
+      check:
+        - '[去重指令] 若NPC已在列表中，必须先删除旧条目，只保留最新状态。'
+        - '选取最近1-3个因主角行为导致 relationshipBook 发生变化的NPC。'
+        - "格式示例：['杨幂(↑信服)', '卓伟(↓死磕)']。"
+
+  # --- 特殊机制 ---
+  butterflyEffect:
+    erasedList:
+      type: |-
+        {
+          [被抢占的作品名: string]: string // 键为作品名，值为原作者/原拥有者
+        }
+      check:
+        - '当主角发布作品时，若该作品在现实历史中属于未来或其他创作者，必须在此记录。'
+        - 'Key为作品名，Value为现实中的原作者。'
+        - '作用：用于触发<rule_世界运转>模块二的[抹除机制]，防止原作者在未来重复创作该作品。'

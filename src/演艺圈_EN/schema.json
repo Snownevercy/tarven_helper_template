@@ -1,0 +1,349 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "world": {
+      "type": "object",
+      "properties": {
+        "currentDate": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "currentLocation": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "eraNews": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "industryNews": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "gossipNews": {
+          "default": "待初始化",
+          "type": "string"
+        }
+      }
+    },
+    "protagonist": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "$birthday": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "_age": {
+          "type": "number"
+        },
+        "appearance": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "occupation": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "kink": {
+          "default": "无",
+          "type": "string"
+        }
+      }
+    },
+    "career": {
+      "type": "object",
+      "properties": {
+        "works": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "industryAwards": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "professionalAssessment": {
+      "type": "object",
+      "properties": {
+        "currentTier": {
+          "default": "待初始化",
+          "type": "string",
+          "enum": [
+            "待初始化",
+            "素人",
+            "十八线",
+            "三线",
+            "二线",
+            "一线",
+            "顶流",
+            "天王巨星"
+          ]
+        },
+        "mediaSentiment": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "publicReputation": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "fanbase": {
+          "default": "待初始化",
+          "type": "string"
+        }
+      }
+    },
+    "personalAccount": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "monthlyFixedIncome": {
+          "description": "每月固定收入总和：工资、租金收入、投资分红等",
+          "$ref": "#/$defs/__schema0"
+        },
+        "monthlyFixedExpense": {
+          "description": "每月固定支出总和：房租、贷款月供、生活费等",
+          "$ref": "#/$defs/__schema1"
+        },
+        "oneTimePersonalChange": {
+          "description": "本轮一次性收支净变动（正数=收入，负数=支出）",
+          "$ref": "#/$defs/__schema2"
+        },
+        "contractStatus": {
+          "default": "待初始化",
+          "type": "string"
+        },
+        "assets": {
+          "description": "格式：资产描述@数量@购入总价（人民币）",
+          "default": {},
+          "$ref": "#/$defs/__schema3"
+        },
+        "_cash": {
+          "type": "number"
+        }
+      }
+    },
+    "companyAccount": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "monthlyRevenueSources": {
+          "description": "公司每月经营性收入来源。Key 必须为固定 ID（如 id_1、id_2），勿用业务名称作 Key；业务显示名写在每条 name 字段",
+          "default": {},
+          "$ref": "#/$defs/__schema4"
+        },
+        "monthlyFixedExpenses": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "payroll": {
+              "description": "Monthly fixed payroll and staff-related costs (operating expenses: mainly R&D / S&M / G&A).",
+              "$ref": "#/$defs/__schema11"
+            },
+            "facilityCost": {
+              "description": "Office / studio rent and facility utilities (operating expenses: usually classified as G&A).",
+              "$ref": "#/$defs/__schema12"
+            },
+            "marketingBudget": {
+              "description": "每月固定营销支出（广告、推广等）；大型一次性活动走公账一次性变动",
+              "$ref": "#/$defs/__schema13"
+            },
+            "other": {
+              "description": "每月其他固定支出（软件订阅、设备折旧、保险等）",
+              "$ref": "#/$defs/__schema14"
+            }
+          }
+        },
+        "oneTimeCompanyChange": {
+          "description": "本轮非经营性资金流动（正数=收入，负数=支出）",
+          "$ref": "#/$defs/__schema15"
+        },
+        "_cash": {
+          "type": "number"
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "socialMap": {
+          "default": [
+            "无"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recentInteractions": {
+          "default": [
+            "无"
+          ],
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema16"
+          },
+          "description": "最近有过关键交互的人"
+        },
+        "relationshipBook": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "butterflyEffect": {
+      "type": "object",
+      "properties": {
+        "erasedList": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "description": "原作者"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "world",
+    "protagonist",
+    "career",
+    "professionalAssessment",
+    "network",
+    "butterflyEffect"
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "number"
+    },
+    "__schema1": {
+      "type": "number"
+    },
+    "__schema2": {
+      "type": "number"
+    },
+    "__schema3": {
+      "type": "object",
+      "properties": {
+        "realEstate": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vehicles": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stocks": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "__schema4": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^id_\\d+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "业务显示名称，如「影视制作」「代言商务」，可随剧情修改，勿用名称当 record 的 key",
+            "default": "待初始化",
+            "$ref": "#/$defs/__schema5"
+          },
+          "_scope": {
+            "description": "该业务线涵盖的范围与定义（简短文本，用于判断新业务是否归入本条）",
+            "default": "待初始化",
+            "$ref": "#/$defs/__schema6"
+          },
+          "monthlyVolume": {
+            "description": "规模指标(volume)：按量计费=本月销量；订阅=本月活跃/付费用户数(user base)",
+            "$ref": "#/$defs/__schema7"
+          },
+          "unitPrice": {
+            "description": "单位收益(unit value)：按量计费=每次/每件平均收入；订阅=每用户每月平均收入(ARPU)",
+            "$ref": "#/$defs/__schema8"
+          },
+          "variableCostRate": {
+            "description": "每单位销售的可变成本占比，0.0~1.0",
+            "default": 0.3,
+            "$ref": "#/$defs/__schema9"
+          },
+          "_monthlyGrossProfit": {
+            "description": "由脚本计算：月销量 * 单价 * (1 - 可变成本率)",
+            "$ref": "#/$defs/__schema10"
+          }
+        }
+      }
+    },
+    "__schema5": {
+      "type": "string"
+    },
+    "__schema6": {
+      "type": "string"
+    },
+    "__schema7": {
+      "type": "number"
+    },
+    "__schema8": {
+      "type": "number"
+    },
+    "__schema9": {
+      "type": "number"
+    },
+    "__schema10": {
+      "type": "number"
+    },
+    "__schema11": {
+      "type": "number"
+    },
+    "__schema12": {
+      "type": "number"
+    },
+    "__schema13": {
+      "type": "number"
+    },
+    "__schema14": {
+      "type": "number"
+    },
+    "__schema15": {
+      "type": "number"
+    },
+    "__schema16": {
+      "type": "string"
+    }
+  }
+}

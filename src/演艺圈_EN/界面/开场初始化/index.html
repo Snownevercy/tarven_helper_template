@@ -1,0 +1,31 @@
+<head></head>
+<body>
+  <div class="sheet">
+    <div class="head">
+      <div class="stamp">绝密·归档</div>
+      <h1>拍摄通告单</h1>
+      <div class="sub"><span>项目：纯洁心灵·逐梦演艺圈</span><span>编号：NO.2008-001</span></div>
+    </div>
+    <div class="grid">
+      <!-- ► 艺人档案（置顶） -->
+      <div class="grp full dash"><label class="sec-title">► 艺人档案</label></div>
+      <div class="grp"><label>姓名</label><input type="text" id="protagonist_name" placeholder="请输入姓名"></div>
+      <div class="grp"><label>出生日期</label><input type="date" id="protagonist_$birthday" value="1980-01-01"></div>
+      <div class="grp full"><label>外貌特征</label><textarea id="protagonist_appearance" rows="2" placeholder="简述五官、气质、身材..."></textarea></div>
+      <div class="grp full"><label>当前公开身份</label><input type="text" id="protagonist_occupation" placeholder="例如：电影学院落榜生 / 横店特约群演"></div>
+      <div class="grp full"><label class="kink-label">⚠ 私密癖好 [绝密]</label><input type="text" id="protagonist_kink" placeholder="仅供导演参考，请诚实填写..."></div>
+
+      <!-- ► 世界 / 开机信息（置顶） -->
+      <div class="grp full dash sec-dash"><label class="sec-title">► 世界 / 开机信息</label></div>
+      <div class="grp"><label>当前日期时间</label><input type="datetime-local" id="world_currentDate" value="2008-08-08T20:00"></div>
+      <div class="grp"><label>当前地点</label><input type="text" id="world_currentLocation" placeholder="国家-城市-具体地点"></div>
+      <div class="grp full"><label>第一场戏 / 开局情境</label><textarea id="world_openingScene" rows="3" placeholder="你正处于什么状况？单独描述..."></textarea></div>
+
+      <!-- ► 个人账户（仅两项） -->
+      <div class="grp full dash sec-dash"><label class="sec-title">► 个人账户</label></div>
+      <div class="grp"><label>收入状况</label><input type="number" id="personalAccount_monthlyFixedIncome" min="0" step="1" value="0" placeholder="每月固定收入"></div>
+      <div class="grp"><label>当前存款</label><input type="text" id="personalAccount_oneTimePersonalChange" placeholder="例如：5000 或 -300000（负债）"></div>
+    </div>
+    <div class="foot"><button type="button" id="btn">Action</button></div>
+  </div>
+</body>
