@@ -390,7 +390,8 @@ const renderModules = {
 
     // 渲染合约状态（按分号分行显示）
     const renderContract = (contractStr: string): string => {
-      if (!contractStr || contractStr === '无' || contractStr === '待初始化') return contractStr === '无' ? '无' : '待初始化';
+      if (!contractStr || contractStr === '无' || contractStr === '待初始化')
+        return contractStr === '无' ? '无' : '待初始化';
       // 按分号分割，每个合约单独一行
       const contracts = contractStr
         .split(/[;；]/)
@@ -893,7 +894,10 @@ function initFatePhone() {
     }
 
     try {
-      if (stat_data.companyAccount?.monthlyRevenueSources && projectId in stat_data.companyAccount.monthlyRevenueSources) {
+      if (
+        stat_data.companyAccount?.monthlyRevenueSources &&
+        projectId in stat_data.companyAccount.monthlyRevenueSources
+      ) {
         delete stat_data.companyAccount.monthlyRevenueSources[projectId];
         _.set(variables, 'stat_data', stat_data);
         await Mvu.replaceMvuData(variables, { type: 'message', message_id: 'latest' });
@@ -939,7 +943,14 @@ function initFatePhone() {
       const oldMonthlyIncome = _.get(oldStatData, 'personalAccount.monthlyFixedIncome', 0);
       const oldMonthlyExpense = _.get(oldStatData, 'personalAccount.monthlyFixedExpense', 0);
 
-      if (oldCurrentDate && newCurrentDate && oldCurrentDate !== '待定' && oldCurrentDate !== '待初始化' && newCurrentDate !== '待定' && newCurrentDate !== '待初始化') {
+      if (
+        oldCurrentDate &&
+        newCurrentDate &&
+        oldCurrentDate !== '待定' &&
+        oldCurrentDate !== '待初始化' &&
+        newCurrentDate !== '待定' &&
+        newCurrentDate !== '待初始化'
+      ) {
         // 计算跨月数
         const monthCrossing = calculateMonthCrossing(oldCurrentDate, newCurrentDate);
 
@@ -1182,7 +1193,14 @@ function initFatePhone() {
       // 计算并保护 protagonist._age
       const currentDate = _.get(new_stat_data, 'world.currentDate');
       const birthday = _.get(new_stat_data, 'protagonist.$birthday');
-      if (currentDate && birthday && currentDate !== '待定' && currentDate !== '待初始化' && birthday !== '待定' && birthday !== '待初始化') {
+      if (
+        currentDate &&
+        birthday &&
+        currentDate !== '待定' &&
+        currentDate !== '待初始化' &&
+        birthday !== '待定' &&
+        birthday !== '待初始化'
+      ) {
         const calculatedAge = calculateAge(currentDate, birthday);
         if (calculatedAge !== null) {
           _.set(new_stat_data, 'protagonist._age', calculatedAge);
@@ -1196,7 +1214,14 @@ function initFatePhone() {
       const old_current_date = _.get(old_stat_data, 'world.currentDate');
       const new_current_date = _.get(new_stat_data, 'world.currentDate');
       let monthCrossing = 0;
-      if (old_current_date && new_current_date && old_current_date !== '待定' && old_current_date !== '待初始化' && new_current_date !== '待定' && new_current_date !== '待初始化') {
+      if (
+        old_current_date &&
+        new_current_date &&
+        old_current_date !== '待定' &&
+        old_current_date !== '待初始化' &&
+        new_current_date !== '待定' &&
+        new_current_date !== '待初始化'
+      ) {
         monthCrossing = calculateMonthCrossing(old_current_date, new_current_date);
         console.info(
           `[状态栏-只读字段] 计算跨月数: 旧日期=${old_current_date}, 新日期=${new_current_date}, 跨月数=${monthCrossing}`,
@@ -1324,7 +1349,11 @@ function initFatePhone() {
 
             // 计算月毛利：monthlyVolume * unitPrice * (1 - variableCostRate)
             const calculatedProfit = calculateMonthlyProfit(monthlyVolume, unitPrice, variableCostRate);
-            _.set(new_stat_data, `companyAccount.monthlyRevenueSources.${projectId}._monthlyGrossProfit`, calculatedProfit);
+            _.set(
+              new_stat_data,
+              `companyAccount.monthlyRevenueSources.${projectId}._monthlyGrossProfit`,
+              calculatedProfit,
+            );
 
             console.info(
               `[状态栏-只读字段] 计算项目月毛利: 项目=${projectId}, monthlyVolume=${monthlyVolume}, unitPrice=${unitPrice}, variableCostRate=${variableCostRate}, _monthlyGrossProfit=${calculatedProfit}`,

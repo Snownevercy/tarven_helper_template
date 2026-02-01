@@ -60,10 +60,7 @@ function collectFormData(): Record<string, unknown> {
 /**
  * 深合并：只合并我们提供的部分，不覆盖未提供的嵌套对象
  */
-function mergeStatData(
-  base: Record<string, unknown>,
-  partial: Record<string, unknown>,
-): Record<string, unknown> {
+function mergeStatData(base: Record<string, unknown>, partial: Record<string, unknown>): Record<string, unknown> {
   const out = { ...base };
   for (const [key, value] of Object.entries(partial)) {
     if (key.startsWith('_')) continue;
