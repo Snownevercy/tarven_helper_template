@@ -89,9 +89,19 @@
           }
         }
       check:
-        - '现有companyAccount.monthlyRevenueSources的对应key为：<%= (function(v){ return Object.keys(v && typeof v === "object" && !Array.isArray(v) ? v : {}).join("、"); })(_.get(variables || {}, "stat_data.companyAccount.monthlyRevenueSources")) %>'
-        - '根据剧情的变动,可对以上 key 使用 replace 更新monthlyVolume；禁止对未列出的 key 进行 replace 或 insert。'
-        - 若业务线被砍掉，则从记录中 remove该条key
+        - |
+          <%
+          const mrs = _.get(variables || {}, 'stat_data.companyAccount.monthlyRevenueSources');
+          const keys = (mrs && typeof mrs === 'object' && !Array.isArray(mrs)) ? Object.keys(mrs) : [];
+          if (keys.length === 0) {
+            print("- '当公司正式上线业务时,根据剧情决定是否应对 companyAccount.monthlyRevenueSources 进行 insert 新增业务线；新增时 key 须为 id_1、id_2、id_3 … 等稳定 ID。'");
+          } else {
+            const indent = '          ';
+            print("- '现有 companyAccount.monthlyRevenueSources 的对应 key 为：" + keys.join('、') + "'\n");
+            print(indent + "- '根据剧情的变动，可对以上 key 使用 replace 更新 monthlyVolume；禁止对未列出的 key 进行 replace 或 insert。'\n");
+            print(indent + "- '若业务线被砍掉，则从记录中 remove 该条 key。'");
+          }
+          %>
     monthlyFixedExpenses.${payroll|facilityCost|marketingBudget|other}:
       type: number
       check:
