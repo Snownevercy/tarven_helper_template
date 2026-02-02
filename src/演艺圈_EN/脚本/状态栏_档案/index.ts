@@ -1923,17 +1923,12 @@ function renderCompanyTab(sd: SchemaData): string {
     )
     .join('');
 
-  const receivableGrid =
-    receivableCards ||
-    `<div style="font-size:0.75rem; color:#4b5563;">暂无应收账款记录</div>`;
+  const receivableGrid = receivableCards || `<div style="font-size:0.75rem; color:#4b5563;">暂无应收账款记录</div>`;
 
   const receivablesListText =
     allMonths.length === 0
       ? '全部应收账款：无'
-      : '全部应收账款：' +
-        allMonths
-          .map(ym => `${ym} ¥${Number(receivablesObj[ym]).toLocaleString()}`)
-          .join('； ');
+      : '全部应收账款：' + allMonths.map(ym => `${ym} ¥${Number(receivablesObj[ym]).toLocaleString()}`).join('； ');
 
   const fixedCostsTableRows = fixedCostEntries
     .map(({ key, label }) => {
@@ -2052,25 +2047,20 @@ function renderNetworkTab(sd: SchemaData): string {
   const relationList: Array<{ name: string; v: number }> = [];
   if (typeof relationMap === 'object' && relationMap !== null) {
     for (const k in relationMap) {
-      const v =
-        typeof relationMap[k] === 'number' ? relationMap[k] : parseInt(String(relationMap[k])) || 0;
+      const v = typeof relationMap[k] === 'number' ? relationMap[k] : parseInt(String(relationMap[k])) || 0;
       relationList.push({ name: k, v });
     }
   }
   const interactionTagsHtml =
     Array.isArray(interactions) && interactions.length > 0 && interactions[0] !== '无'
       ? interactions
-          .map(
-            i =>
-              `<span class="interaction-tag">${String(i).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`,
-          )
+          .map(i => `<span class="interaction-tag">${String(i).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`)
           .join('')
       : '<span class="interaction-tag" style="opacity:0.7;">无</span>';
   const relationshipCardsHtml = relationList
     .sort((a, b) => b.v - a.v)
     .map(r => {
-      const indicatorClass =
-        r.v < -30 ? 'indicator-high' : r.v <= 30 ? 'indicator-mid' : 'indicator-low';
+      const indicatorClass = r.v < -30 ? 'indicator-high' : r.v <= 30 ? 'indicator-mid' : 'indicator-low';
       const scoreClass = r.v < -30 ? 'score-low' : r.v <= 30 ? 'score-mid' : 'score-high';
       const roleLabel = r.v > 30 ? '核心盟友' : r.v < -30 ? '潜在敌对' : '关系网成员';
       return `
@@ -2092,10 +2082,7 @@ function renderNetworkTab(sd: SchemaData): string {
   const mapTagsHtml =
     Array.isArray(circles) && circles.length > 0 && circles[0] !== '无'
       ? circles
-          .map(
-            c =>
-              `<span class="map-tag">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`,
-          )
+          .map(c => `<span class="map-tag">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`)
           .join('')
       : '<span class="map-tag" style="opacity:0.7;">无</span>';
 
@@ -2198,10 +2185,7 @@ function renderWorldTab(sd: SchemaData): string {
 
 function renderButterflyTab(sd: SchemaData): string {
   const erased = getVal(sd, 'butterflyEffect.erasedList', {} as Record<string, string>);
-  const entries =
-    erased && typeof erased === 'object'
-      ? Object.entries(erased as Record<string, string>)
-      : [];
+  const entries = erased && typeof erased === 'object' ? Object.entries(erased as Record<string, string>) : [];
   const currentDate = getVal(sd, 'world.currentDate', '');
 
   const erasedCardsHtml =
@@ -2601,11 +2585,7 @@ function initArchiveStatus(): void {
       const companyOneTimeChange = _.get(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
       const oldFixedCosts = _.get(oldStatData, 'companyAccount.monthlyFixedExpenses', {});
       const oldRunningProjects = _.get(oldStatData, 'companyAccount.monthlyRevenueSources', {});
-      const oldReceivables = _.get(
-        oldStatData,
-        'companyAccount.$receivablesByDueMonth',
-        {},
-      ) as Record<string, number>;
+      const oldReceivables = _.get(oldStatData, 'companyAccount.$receivablesByDueMonth', {}) as Record<string, number>;
 
       const oldPersonalCash = _.get(oldStatData, 'personalAccount._cash', 0);
       const personalOneTimeChange = _.get(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
@@ -2873,4 +2853,3 @@ $(window).on('pagehide', () => {
   $(document).off(`.${EVENTS_NS}`);
   $(window.parent.document).off(`.${EVENTS_NS}`);
 });
-
