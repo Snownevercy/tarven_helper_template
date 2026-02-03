@@ -1,4 +1,9 @@
 import { compare } from 'compare-versions';
+<<<<<<< HEAD
+=======
+import JSON5 from 'json5';
+import { jsonrepair } from 'jsonrepair';
+>>>>>>> 657d325b384170d58b72e3fe3cc38173e31a414a
 import { toDotPath } from 'zod/v4/core';
 
 export function assignInplace<T>(destination: T[], new_array: T[]): T[] {
@@ -23,6 +28,7 @@ export function chunkBy<T>(array: T[], predicate: (lhs: T, rhs: T) => boolean): 
   return chunks;
 }
 
+<<<<<<< HEAD
 export function regexFromString(input: string): RegExp | null {
   if (!input) {
     return null;
@@ -34,13 +40,36 @@ export function regexFromString(input: string): RegExp | null {
     }
     if (match[2] && !/^(?!.*?(.).*?\1)[gmixXsuUAJ]+$/.test(match[3])) {
       return new RegExp(input, 'i');
+=======
+export function regexFromString(input: string, replace_macros?: boolean): RegExp | null {
+  if (!input) {
+    return null;
+  }
+  const makeRegex = (pattern: string, flags: string) => {
+    if (replace_macros) {
+      pattern = substitudeMacros(pattern);
+    }
+    return new RegExp(pattern, flags);
+  };
+  try {
+    const match = input.match(/\/(.+)\/([a-z]*)/i);
+    if (!match) {
+      return makeRegex(_.escapeRegExp(input), 'i');
+    }
+    if (match[2] && !/^(?!.*?(.).*?\1)[gmixXsuUAJ]+$/.test(match[3])) {
+      return makeRegex(input, 'i');
+>>>>>>> 657d325b384170d58b72e3fe3cc38173e31a414a
     }
     let flags = match[2] ?? '';
     _.pull(flags, 'g');
     if (flags.indexOf('i') === -1) {
       flags = flags + 'i';
     }
+<<<<<<< HEAD
     return new RegExp(match[1], flags);
+=======
+    return makeRegex(match[1], flags);
+>>>>>>> 657d325b384170d58b72e3fe3cc38173e31a414a
   } catch {
     return null;
   }
@@ -75,3 +104,52 @@ export function prettifyErrorWithInput(error: z.ZodError) {
     })
     .join('\n');
 }
+<<<<<<< HEAD
+=======
+
+export function literalYamlify(value: any) {
+  return YAML.stringify(value, { blockQuote: 'literal' });
+}
+
+export function parseString(content: string): any {
+  let parsed: unknown;
+  try {
+    parsed = YAML.parseDocument(content, { merge: true }).toJS();
+  } catch (yaml_error) {
+    try {
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      parsed = JSON5.parse(content);
+    } catch (json5_error) {
+      try {
+        parsed = JSON.parse(jsonrepair(content));
+      } catch (json_error) {
+        const toError = (error: unknown) => (error instanceof Error ? error.message : String(error));
+        throw new Error(
+          literalYamlify({
+            ['要解析的字符串不是有效的 YAML/JSON 格式']: {
+              字符串内容: content,
+              YAML错误信息: toError(yaml_error),
+              JSON5错误信息: toError(json5_error),
+              尝试修复JSON时的错误信息: toError(json_error),
+            },
+          }),
+        );
+      }
+    }
+  }
+  return parsed;
+}
+
+export async function checkAndUpdateCharacter(name: string, latest_version: string, png_url: string): Promise<void> {
+  const current_version = (await getCharacter(name)).version.trim() || '0.0.0';
+  if (compare(current_version, latest_version, '>=')) {
+    return;
+  }
+  await importRawCharacter(name, await fetch(png_url).then(response => response.blob()));
+  replaceCharacter(name, { version: latest_version });
+  toastr.success(
+    `角色卡已自动更新到 '${latest_version.startsWith('v') ? latest_version : `v${latest_version}`}'`,
+    name,
+  );
+}
+>>>>>>> 657d325b384170d58b72e3fe3cc38173e31a414a
