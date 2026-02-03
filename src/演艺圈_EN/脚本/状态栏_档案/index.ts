@@ -52,9 +52,9 @@ const ARCHIVE_STATUS_STYLES = `
   /* 悬浮开关图标：右上角，参考 状态栏 TR 位置 */
   #archive-status-toggle {
     position: absolute;
-    top: 0;
+    top: 20px;
     right: 28px;
-    transform: translate(50%, -50%);
+    transform: translate(50%, 0);
     width: 40px;
     height: 40px;
     border-radius: 999px;
@@ -608,7 +608,6 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root .revenue-table {
     width: 100%;
-    min-width: 460px;
     font-size: 0.875rem;
     border: 2px solid #292524;
     border-collapse: collapse;
@@ -2356,8 +2355,10 @@ function renderArchive(): void {
       $('#archive-status-title').text('逐梦演艺圈');
       $('#archive-status-subtitle').text('档案状态栏');
       $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').show();
+      $('#archive-status-root .archive-header').show();
     } else {
       $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').hide();
+      $('#archive-status-root .archive-header').hide();
     }
     $('#archive-status-meta-time').text('数据加载失败');
     $('#archive-status-meta-location').text('-');
@@ -2372,8 +2373,10 @@ function renderArchive(): void {
     $('#archive-status-title').text('逐梦演艺圈');
     $('#archive-status-subtitle').text('在娱乐圈的浮沉中寻找自己的位置 版本：1.0');
     $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').show();
+    $('#archive-status-root .archive-header').show();
   } else {
     $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').hide();
+    $('#archive-status-root .archive-header').hide();
   }
 
   const timeStr = getVal(sd, 'world.currentDate', '待初始化');
