@@ -23,8 +23,8 @@ import {
   getCrossedMonths,
   processCompanyCashWithReceivables,
 } from '../状态栏/calc';
-import { getMvuDataSafe, getVal } from '../状态栏/render';
 import { setupReadonlyFields } from '../状态栏/readonlyFields';
+import { getMvuDataSafe, getVal } from '../状态栏/render';
 
 const EVENTS_NS = 'archiveStatus';
 const STORAGE_TAB_KEY = 'archive_status_tab_v1';
@@ -80,7 +80,7 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .archive-container {
-    width: min(700px, 60vw);
+    width: min(700px, 95vw);
     height: min(520px, 70vh);
     position: relative;
   }
@@ -1505,11 +1505,29 @@ const ARCHIVE_STATUS_STYLES = `
       right: 12px;
     }
     #archive-status-root .archive-container {
-      width: min(700px, 65vw);
+      width: 95vw;
       height: min(520px, 72vh);
     }
     #archive-status-root .content-area {
       padding: 0.8rem 0.9rem 0.9rem 0.8rem;
+    }
+
+    /* 手机端：商业概览与应收账款改为单列，表格字号与间距缩小以提升可读性 */
+    #archive-status-root .overview-grid,
+    #archive-status-root .receivables-grid {
+      grid-template-columns: 1fr;
+    }
+
+    #archive-status-root .transaction-table,
+    #archive-status-root .revenue-table {
+      font-size: 0.7rem;
+    }
+
+    #archive-status-root .transaction-table th,
+    #archive-status-root .transaction-table td,
+    #archive-status-root .revenue-table th,
+    #archive-status-root .revenue-table td {
+      padding: 0.45rem 0.4rem;
     }
   }
 </style>
@@ -1578,9 +1596,12 @@ type ArchiveState = {
   isCollapsed: boolean;
 };
 
+const savedCollapse = localStorage.getItem(STORAGE_COLLAPSE_KEY);
+
 const archiveState: ArchiveState = {
   currentTab: (localStorage.getItem(STORAGE_TAB_KEY) as ArchiveTabKey) || 'protagonist',
-  isCollapsed: localStorage.getItem(STORAGE_COLLAPSE_KEY) === 'true',
+  // 首次没有记录时，默认折叠；之后尊重用户上一次的选择
+  isCollapsed: savedCollapse !== null ? savedCollapse === 'true' : true,
 };
 
 function renderProtagonistTab(sd: SchemaData): string {
