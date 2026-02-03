@@ -2351,8 +2351,14 @@ function renderArchive(): void {
     sd = getMvuDataSafe();
   } catch (e) {
     console.warn('档案状态栏获取数据失败:', e);
-    $('#archive-status-title').text('逐梦演艺圈');
-    $('#archive-status-subtitle').text('档案状态栏');
+    const tab: ArchiveTabKey = archiveState.currentTab || 'protagonist';
+    if (tab === 'protagonist') {
+      $('#archive-status-title').text('逐梦演艺圈');
+      $('#archive-status-subtitle').text('档案状态栏');
+      $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').show();
+    } else {
+      $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').hide();
+    }
     $('#archive-status-meta-time').text('数据加载失败');
     $('#archive-status-meta-location').text('-');
     $('#archive-status-content').html(
@@ -2361,15 +2367,19 @@ function renderArchive(): void {
     return;
   }
 
-  $('#archive-status-title').text('逐梦演艺圈');
-  $('#archive-status-subtitle').text('在娱乐圈的浮沉中寻找自己的位置');
+  const tab: ArchiveTabKey = archiveState.currentTab || 'protagonist';
+  if (tab === 'protagonist') {
+    $('#archive-status-title').text('逐梦演艺圈');
+    $('#archive-status-subtitle').text('在娱乐圈的浮沉中寻找自己的位置 版本：1.0');
+    $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').show();
+  } else {
+    $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').hide();
+  }
 
   const timeStr = getVal(sd, 'world.currentDate', '待初始化');
   const location = getVal(sd, 'world.currentLocation', '待初始化');
   $('#archive-status-meta-time').text(String(timeStr));
   $('#archive-status-meta-location').text(String(location));
-
-  const tab: ArchiveTabKey = archiveState.currentTab || 'protagonist';
 
   try {
     $('#archive-status-content').html(renderTabContent(tab, sd));
@@ -2691,7 +2701,7 @@ function initArchiveStatus(): void {
 
         await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
 
-        let msg = `现金重算完成（简化模式）！\n\n【公司账户】\n当前: ¥${Number(currentCompanyCash).toLocaleString()}\n变动: ${
+        const msg = `现金重算完成（简化模式）！\n\n【公司账户】\n当前: ¥${Number(currentCompanyCash).toLocaleString()}\n变动: ${
           companyOneTimeChange >= 0 ? '+' : ''
         }¥${Number(companyOneTimeChange).toLocaleString()}\n新值: ¥${newCompanyCash.toLocaleString()}\n\n【个人账户】\n当前: ¥${Number(
           currentPersonalCash,
