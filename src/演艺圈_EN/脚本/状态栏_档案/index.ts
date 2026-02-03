@@ -1664,6 +1664,9 @@ function renderProtagonistTab(sd: SchemaData): string {
           <div>归档人：_____________</div>
           <div>日期：_____________</div>
         </div>
+        <div style="margin-top: 0.5rem; font-size: 0.7rem; color: #a8a29e; text-align: right;">
+          版本：1.0
+        </div>
       </div>
     </div>
   `;
