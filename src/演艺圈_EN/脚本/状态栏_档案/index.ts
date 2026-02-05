@@ -1510,16 +1510,16 @@ const ARCHIVE_STATUS_STYLES = `
   /* 响应式：窄屏时整体仍在左上角，与小手机一致 */
   @media (max-width: 768px) {
     #archive-status-root {
-      top: 12px;
+      top: 120px;
       left: 12px;
     }
     #archive-status-root.collapsed #archive-status-toggle {
       left: 12px;
-      top: 36px;
+      top: 120px;
     }
     #archive-status-root .archive-container {
       width: 90vw;
-      height: min(800px, 95vh);
+      height: min(700px, 95vh);
     }
     #archive-status-root .content-area {
       padding: 0.8rem 0.9rem 0.9rem 0.8rem;
