@@ -107,6 +107,7 @@ function watch_tavern_helper(compiler: webpack.Compiler) {
 }
 
 let watcher: FSWatcher;
+<<<<<<< HEAD
 const execute = () => {
   exec('pnpm dump', { cwd: import.meta.dirname });
   console.info('\x1b[36m[schema_dump]\x1b[0m 已将所有 schema.ts 转换为 schema.json');
@@ -116,19 +117,47 @@ function dump_schema(compiler: webpack.Compiler) {
   if (!compiler.options.watch) {
     execute_debounced();
   } else if (!watcher) {
+=======
+const dump = () => {
+  exec('pnpm dump', { cwd: import.meta.dirname });
+  console.info('\x1b[36m[schema_dump]\x1b[0m 已将所有 schema.ts 转换为 schema.json');
+};
+const dump_debounced = _.debounce(dump, 500, { leading: true, trailing: false });
+function schema_dump(compiler: webpack.Compiler) {
+  if (!compiler.options.watch) {
+    dump_debounced();
+    return;
+  }
+  if (!watcher) {
+>>>>>>> f0b81694107b46de13c384cb766919135218501f
     watcher = watch('src', {
       awaitWriteFinish: true,
     }).on('all', (_event, path) => {
       if (path.endsWith('schema.ts')) {
+<<<<<<< HEAD
         execute_debounced();
+=======
+        dump_debounced();
+>>>>>>> f0b81694107b46de13c384cb766919135218501f
       }
     });
   }
 }
 
 let child_process: ChildProcess;
+<<<<<<< HEAD
 function watch_tavern_sync(compiler: webpack.Compiler) {
   if (!compiler.options.watch) {
+=======
+const bundle = () => {
+  exec('pnpm sync bundle all', { cwd: import.meta.dirname });
+  console.info('\x1b[36m[tavern_sync]\x1b[0m 已打包所有配置了的角色卡/世界书/预设');
+};
+const bundle_debounced = _.debounce(bundle, 500, { leading: true, trailing: false });
+function tavern_sync(compiler: webpack.Compiler) {
+  if (!compiler.options.watch) {
+    bundle_debounced();
+>>>>>>> f0b81694107b46de13c384cb766919135218501f
     return;
   }
   compiler.hooks.watchRun.tap('watch_tavern_sync', () => {
@@ -430,8 +459,13 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
     )
       .concat(
         { apply: watch_tavern_helper },
+<<<<<<< HEAD
         { apply: dump_schema },
         { apply: watch_tavern_sync },
+=======
+        { apply: schema_dump },
+        { apply: tavern_sync },
+>>>>>>> f0b81694107b46de13c384cb766919135218501f
         new VueLoaderPlugin(),
         unpluginAutoImport({
           dts: true,
@@ -531,7 +565,11 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
       }
 
       if (
+<<<<<<< HEAD
         ['vue', 'vue-router', 'pixi.js'].every(key => request !== key) &&
+=======
+        ['vue', 'vue-router'].every(key => request !== key) &&
+>>>>>>> f0b81694107b46de13c384cb766919135218501f
         ['pixi', 'react', 'vue'].some(key => request.includes(key))
       ) {
         return callback();
@@ -545,7 +583,10 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         'vue-router': 'VueRouter',
         yaml: 'YAML',
         zod: 'z',
+<<<<<<< HEAD
         'pixi.js': 'PIXI',
+=======
+>>>>>>> f0b81694107b46de13c384cb766919135218501f
       };
       if (request in global) {
         return callback(null, 'var ' + global[request as keyof typeof global]);
