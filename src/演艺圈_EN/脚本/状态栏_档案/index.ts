@@ -91,7 +91,7 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root .archive-container {
     width: min(700px, 95vw);
-    height: min(520px, 70vh);
+    height: min(700px, 70vh);
     position: relative;
   }
 
@@ -1518,8 +1518,8 @@ const ARCHIVE_STATUS_STYLES = `
       top: 12px;
     }
     #archive-status-root .archive-container {
-      width: 95vw;
-      height: min(520px, 72vh);
+      width: 90vw;
+      height: min(520px, 85vh);
     }
     #archive-status-root .content-area {
       padding: 0.8rem 0.9rem 0.9rem 0.8rem;
