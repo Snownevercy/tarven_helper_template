@@ -1515,11 +1515,11 @@ const ARCHIVE_STATUS_STYLES = `
     }
     #archive-status-root.collapsed #archive-status-toggle {
       left: 12px;
-      top: 12px;
+      top: 36px;
     }
     #archive-status-root .archive-container {
       width: 90vw;
-      height: min(520px, 85vh);
+      height: min(800px, 95vh);
     }
     #archive-status-root .content-area {
       padding: 0.8rem 0.9rem 0.9rem 0.8rem;
