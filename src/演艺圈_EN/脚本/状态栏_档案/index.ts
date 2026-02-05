@@ -34,12 +34,13 @@ const STORAGE_COLLAPSE_KEY = 'archive_status_collapsed_v1';
 
 const ARCHIVE_STATUS_STYLES = `
 <style id="archive-status-css">
+  /* 与小手机 TL 一致：整体固定在左上角，初始为左上角按钮，点击展开后面板也从左上角展开 */
   #archive-status-root {
     position: fixed;
     top: 60px;
-    right: 10px;
+    left: 10px;
     bottom: auto;
-    left: auto;
+    right: auto;
     z-index: 500;
     font-family: 'Songti SC', 'SimSun', serif;
     color: #1c1917;
@@ -49,12 +50,11 @@ const ARCHIVE_STATUS_STYLES = `
     box-sizing: border-box;
   }
 
-  /* 悬浮开关图标：右上角，参考 状态栏 TR 位置 */
+  /* 开关图标：展开时在侧边栏最上方，收起时固定在视口左上角（便于手机可见） */
   #archive-status-toggle {
     position: absolute;
-    top: 20px;
-    right: 28px;
-    transform: translate(50%, 0);
+    left: 0.25rem;
+    top: 0.75rem;
     width: 40px;
     height: 40px;
     border-radius: 999px;
@@ -72,6 +72,16 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root.collapsed .archive-container {
     display: none;
+  }
+
+  /* 收起时：开关固定到视口左上角，避免手机右上角被刘海/状态栏遮挡 */
+  #archive-status-root.collapsed #archive-status-toggle {
+    position: fixed;
+    left: 10px;
+    top: 60px;
+    right: auto;
+    background: #111827;
+    color: #f9fafb;
   }
 
   #archive-status-root:not(.collapsed) #archive-status-toggle {
@@ -100,11 +110,11 @@ const ARCHIVE_STATUS_STYLES = `
     overflow: hidden;
   }
 
-  /* 左侧纵向标签栏 */
+  /* 左侧纵向标签栏：顶部留出开关按钮高度，避免与开关重叠 */
   #archive-status-root .tab-sidebar {
     width: 3.5rem;
     flex-shrink: 0;
-    padding-top: 0.75rem;
+    padding-top: 3.25rem;
     padding-bottom: 0.75rem;
     padding-left: 0.25rem;
     display: flex;
@@ -1497,11 +1507,15 @@ const ARCHIVE_STATUS_STYLES = `
     background: #4b5563;
   }
 
-  /* 响应式：窄屏时整体略缩小 */
+  /* 响应式：窄屏时整体仍在左上角，与小手机一致 */
   @media (max-width: 768px) {
     #archive-status-root {
       top: 12px;
-      right: 12px;
+      left: 12px;
+    }
+    #archive-status-root.collapsed #archive-status-toggle {
+      left: 12px;
+      top: 12px;
     }
     #archive-status-root .archive-container {
       width: 95vw;

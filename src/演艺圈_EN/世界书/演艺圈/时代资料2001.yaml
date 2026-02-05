@@ -1,0 +1,67 @@
+ChinaMainland2001:
+  location: 中国大陆 (Mainland China)
+  era: 2001年
+  introduction:
+    title: 盛世入场券与移动奇迹的元年
+    summary: >-
+      2001年是中国现代史的“超级大年”，入世与申奥成功让举国沉浸在拥抱世界的宏大叙事中。互联网行业在纳斯达克泡沫破裂后通过移动SP（增值业务）意外开启了中国式盈利模型，实现了从“活下去”到“野蛮生长”的惊人跳跃。
+
+  timelineOfKeyEvents:
+    "2001-04-01": >-
+      中美撞机事件在南海发生，导致中方飞行员王伟牺牲，此事件引发了全国范围的爱国主义浪潮并令中美关系陷入阶段性冰点。
+    "2001-07-13": >-
+      萨马兰奇在北京时间深夜宣布北京获得2008年奥运会主办权，引发举国彻夜狂欢，极大地提振了民族自信心与基建预期。
+    "2001-09-11": >-
+      美国遭遇恐袭，全球地缘政治格局剧变，此事件间接改善了中国的外部战略环境，为后续十年的黄金发展期争取了空间。
+    "2001-09-28": >-
+      陈天桥的盛大网络在中国大陆地区正式运营《传奇》，开启了中国网络游戏的大航海时代，也标志着SP业务与点卡计费模型的成熟。
+    "2001-10": >-
+      上海成功举办APEC会议，中国向世界展示了改革开放的窗口形象，进一步确立了中国在亚太地区的经济地位。
+    "2001-11-10": >-
+      多哈会议正式通过中国加入世贸组织（WTO）的决定，标志着中国全面融入全球分工体系，开启了长达十年的两位数增长神话。
+    "2001-11": >-
+      中国移动正式推出“移动梦网”计划，打破了互联网与电信的壁垒，救活了包括腾讯、搜狐在内的第一代濒临破产的互联网巨头。
+
+
+  economicBarometer:
+    currency: 人民币 (CNY)
+    income_annual_pretax:
+      household_median: "~15,000"
+      individual_low: "~5,000"
+      individual_professional: "~35,000"
+    key_assets:
+      housing_urban_median_price: "~2,200/平米"
+      price_to_income_ratio: "~6.8"
+      new_car_base_model_price: "~130,000 (赛欧“10万元家轿”理念冲击市场)"
+    indicative_prices:
+      global_fast_food_meal: "~18.5"
+      leisure_movie_ticket: "~20-40"
+      gasoline_liter_or_gallon: "~2.8/升"
+    financial_snapshot:
+      stock_index_name: 上证指数 (SSE Composite Index)
+      era_defining_feature: >-
+        2001年上半年延续“519行情”冲至2245点历史高位，但下半年因国有股减持政策影响，市场急转直下，进入长达四年的漫长熊市。
+      benchmark_interest_rate_avg: 约 2.25% (连续降息周期末端)
+
+  factClusterGlossary:
+    political_events: "申奥成功 | 澳门回归两周年 | 庆祝建国52周年 | 反恐合作"
+    key_policies: "中国入世 | 十五计划启动 | 国有股减持试点 | 西气东输开工"
+    geopolitics: "南海撞机 | 911事件 | APEC上海会议 | 中俄睦邻友好合作条约"
+    industry_shifts: "SP业务拯救门户 | 网游元年 | 房改深化 | 汽车大规模进入家庭"
+    iconic_companies: "中国移动 | 盛大网络 | 腾讯(OICQ转QQ) | 联想 | 百度 | 华为"
+    financial_market: "2245点顶部 | 国有股减持风暴 | 银广夏造假案 | 开放式基金试水"
+    economic_policies: "加入WTO协议 | 减税惠农萌芽 | 扩大内需政策"
+    film_and_tv: "大腕 | 情深深雨濛濛 | 康熙王朝 | 流星花园(禁播潮) | 寻秦记 | 重案六组"
+    music: "范特西 | 唯一 | 盛夏的果实 | 一笑而过 | 冷酷到底 | 网络歌曲雏形"
+    literature_and_publishing: "三重门持续热销 | 悟空传 | 哈利波特引进热 | 榕树下"
+    fashion_and_style: "低腰牛仔裤 | 挑染金发 | 运动套装 | 洞洞鞋萌芽 | APEC唐装热"
+    art_and_thought: "全球化乐观主义 | 爱国主义热潮 | 新自由主义讨论"
+    games_and_recreation: "热血传奇 | 石器时代 | CS 1.5 | 联众游戏 | 网吧包夜"
+    sports_culture: "十强赛出线 | 龙之队 | 申奥热 | 米卢蒂诺维奇"
+    disruptive_products: "移动梦网 | 诺基亚8250 | 摩托罗拉V60 | 电子词典(好记星) | 移动QQ"
+    key_technologies: "GPRS网 | 宽带ADSL普及 | 闪存盘(U盘)发明 | 龙芯一号"
+    transportation_tools: "别克赛欧 | 奇瑞风云 | 桑塔纳3000 | 绿皮车向空调车过渡"
+    lifestyle: "发短信(5分钱/条) | 设手机彩铃 | 考研热 | 去上海看APEC"
+    iconic_landmarks: "中华世纪坛 | 上海科技馆 | 东方明珠 | 北京奥林匹克公园规划"
+    social_issues: "入世后的冲击忧虑 | 农民工进城潮 | 论文造假讨论 | 宽带费过高"
+    daily_slang: "我看行 | 翠花上酸菜 | 申奥成功了 | 灌水 | 楼上的 | 恐龙 | 菜鸟"
