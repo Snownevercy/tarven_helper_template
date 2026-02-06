@@ -60,10 +60,9 @@
     oneTimePersonalChange:
       type: number
       check:
-        - 记录本轮剧情中发生的个人账户的一次性大额收支
+        - 记录本轮剧情中发生在个人账户的一次性大额收支净值
         - '适用场景：片酬到账、代言费、分红收入、购买资产、大额消费等。'
-        - '若本轮既有收入又有支出，填写净值即可。'
-        - '严禁混淆公私账户：公司盈利属于公司，只有通过分红/发工资才能流入个人账户。'
+        - 'monthlyFixedIncome和monthlyFixedExpense不计入oneTimePersonalChange的计算'
     contractStatus:
       check:
         - '记录当前经纪合约状态，用于判断咖位。'

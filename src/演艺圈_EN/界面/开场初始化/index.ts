@@ -8,15 +8,6 @@ function get(id: string): string {
   return el?.value?.trim() ?? '';
 }
 
-/** 从「存款/负债」类文本解析数字，负债为负 */
-function parseMoneyText(text: string): number {
-  if (!text.trim()) return 0;
-  const neg = /负|负债|欠|-\s*/.test(text);
-  const match = text.replace(/,/g, '').match(/(\d+(?:\.\d+)?)/);
-  if (!match) return 0;
-  return neg ? -Number(match[1]) : Number(match[1]);
-}
-
 /** 数字输入或纯数字文本 */
 function parseNumber(text: string): number {
   const n = Number(text);
@@ -52,7 +43,7 @@ function collectFormData(): Record<string, unknown> {
     },
     personalAccount: {
       monthlyFixedIncome: parseNumber(get('personalAccount_monthlyFixedIncome')),
-      oneTimePersonalChange: parseMoneyText(get('personalAccount_oneTimePersonalChange')),
+      _cash: parseNumber(get('personalAccount__cash')),
     },
   };
 }
@@ -63,7 +54,6 @@ function collectFormData(): Record<string, unknown> {
 function mergeStatData(base: Record<string, unknown>, partial: Record<string, unknown>): Record<string, unknown> {
   const out = { ...base };
   for (const [key, value] of Object.entries(partial)) {
-    if (key.startsWith('_')) continue;
     if (value !== null && typeof value === 'object' && !Array.isArray(value) && _.isPlainObject(value)) {
       (out as Record<string, unknown>)[key] = mergeStatData(
         ((out[key] as Record<string, unknown>) ?? {}) as Record<string, unknown>,

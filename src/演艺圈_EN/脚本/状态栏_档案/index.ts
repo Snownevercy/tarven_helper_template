@@ -1764,7 +1764,7 @@ function renderPersonalTab(sd: SchemaData): string {
   const contract = getVal(sd, 'personalAccount.contractStatus', '待初始化');
   const assets = getVal(sd, 'personalAccount.assets', {} as Record<string, unknown>);
 
-  const net = income - expense;
+  const net = income - expense + oneTime;
 
   const renderAssets = (assetsObj: Record<string, unknown>): string => {
     if (!assetsObj || typeof assetsObj !== 'object') return '无';
@@ -2679,6 +2679,8 @@ function initArchiveStatus(): void {
         _.set(currentStatData, 'companyAccount._cash', calculatedCompanyCash);
         _.set(currentStatData, 'companyAccount.$receivablesByDueMonth', newReceivables);
         _.set(currentStatData, 'personalAccount._cash', calculatedPersonalCash);
+        _.set(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
+        _.set(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
         _.set(currentVariables, 'stat_data', currentStatData);
 
         await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
@@ -2714,6 +2716,8 @@ function initArchiveStatus(): void {
 
         _.set(currentStatData, 'companyAccount._cash', newCompanyCash);
         _.set(currentStatData, 'personalAccount._cash', newPersonalCash);
+        _.set(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
+        _.set(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
         _.set(currentVariables, 'stat_data', currentStatData);
 
         await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
