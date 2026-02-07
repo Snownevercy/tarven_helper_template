@@ -5,10 +5,10 @@
  * - 功能：复用原「状态栏」脚本的 MVU 读写、商业账户增删改、重算现金等逻辑
  *
  * 依赖：
- * - ../../schema         — MVU 变量结构定义
- * - ../状态栏/calc       — 现金重算相关计算函数
- * - ../状态栏/render     — getMvuDataSafe / getVal（home/business/world 等仍可复用 renderModules）
- * - ../状态栏/readonlyFields — 只读字段保护
+ * - ../../schema           — MVU 变量结构定义
+ * - ../状态栏_共用/calc    — 现金重算相关计算函数
+ * - ../状态栏_共用/data    — getMvuDataSafe / getVal
+ * - ../状态栏_共用/readonlyFields — 只读字段保护
  *
  * 注意：
  * - 为避免污染酒馆全局样式，CSS 全部用 #archive-status-root 前缀做作用域限制
@@ -22,9 +22,9 @@ import {
   calculatePersonalCash,
   getCrossedMonths,
   processCompanyCashWithReceivables,
-} from '../状态栏/calc';
-import { setupReadonlyFields } from '../状态栏/readonlyFields';
-import { getMvuDataSafe, getVal } from '../状态栏/render';
+} from '../状态栏_共用/calc';
+import { getMvuDataSafe, getVal } from '../状态栏_共用/data';
+import { setupReadonlyFields } from '../状态栏_共用/readonlyFields';
 
 const EVENTS_NS = 'archiveStatus';
 const STORAGE_TAB_KEY = 'archive_status_tab_v1';
@@ -143,10 +143,6 @@ const ARCHIVE_STATUS_STYLES = `
     flex-shrink: 0;
   }
 
-  #archive-status-root .tab-label:nth-child(even) {
-    margin-left: 0.25rem;
-  }
-
   #archive-status-root .tab-label:hover {
     background: #c9a070;
     transform: translateX(0.2rem);
@@ -203,50 +199,6 @@ const ARCHIVE_STATUS_STYLES = `
     overflow: auto;
   }
 
-  #archive-status-root .archive-header {
-    border: 3px double #991b1b;
-    background: #faf8f3;
-    background-image: repeating-linear-gradient(
-      0deg,
-      rgba(139,123,95,0.03) 0px,
-      transparent 1px,
-      transparent 2px,
-      rgba(139,123,95,0.03) 3px
-    );
-    padding: 0.75rem 1.25rem;
-    margin-bottom: 0.75rem;
-    position: relative;
-  }
-
-  #archive-status-root .archive-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: 0.25em;
-    text-align: center;
-    color: #1c1917;
-    margin-bottom: 0.15rem;
-  }
-
-  #archive-status-root .archive-subtitle {
-    font-size: 0.7rem;
-    text-align: center;
-    color: #57534e;
-    font-family: monospace;
-  }
-
-  #archive-status-root .archive-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.4rem;
-    font-size: 0.7rem;
-    color: #78716c;
-  }
-
-  #archive-status-root .archive-meta-right {
-    text-align: right;
-    flex: 1;
-  }
-
   #archive-status-root .archive-content {
     flex: 1;
     margin-top: 0.4rem;
@@ -263,41 +215,39 @@ const ARCHIVE_STATUS_STYLES = `
     border-radius: 999px;
   }
 
-  /* ===== 个人档案样式（完全参考 archive-system.html 146-254） ===== */
-  #archive-status-root .doc-header {
-    text-align: center;
-    border: 4px double #991b1b;
-    background: #faf8f3;
-    background-image: repeating-linear-gradient(
-      0deg,
-      rgba(139,123,95,0.03) 0px,
-      transparent 1px,
-      transparent 2px,
-      rgba(139,123,95,0.03) 3px
-    );
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+  /* ===== 个人档案样式：新标题栏（机密章 + 归档日期 + 个人档案标题） ===== */
+  #archive-status-root .personal-doc-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
     position: relative;
+    padding-right: 3.5rem;
   }
 
-  #archive-status-root .doc-title {
-    font-size: 2rem;
+  #archive-status-root .personal-doc-title-wrap {
+    flex: 1;
+  }
+
+  #archive-status-root .personal-doc-title {
+    font-size: 1.5rem;
     font-weight: bold;
-    letter-spacing: 0.3em;
+    letter-spacing: 0.2em;
     color: #1c1917;
-    margin-bottom: 0.5rem;
+    margin: 0 0 0.25rem 0;
   }
 
-  #archive-status-root .doc-subtitle {
-    font-size: 0.875rem;
-    color: #57534e;
+  #archive-status-root .personal-doc-date {
+    font-size: 0.75rem;
     font-family: monospace;
+    color: #57534e;
   }
 
-  #archive-status-root .confidential-stamp {
+  #archive-status-root .personal-doc-title-bar .confidential-stamp {
     position: absolute;
-    top: -0.75rem;
-    right: -0.75rem;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%) rotate(12deg);
     width: 4rem;
     height: 4rem;
     border: 3px solid #dc2626;
@@ -306,8 +256,8 @@ const ARCHIVE_STATUS_STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    transform: rotate(12deg);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    flex-shrink: 0;
   }
 
   #archive-status-root .stamp-text {
@@ -318,13 +268,29 @@ const ARCHIVE_STATUS_STYLES = `
     line-height: 1.2;
   }
 
-  #archive-status-root .doc-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 1rem;
-    font-size: 0.75rem;
-    font-family: monospace;
-    color: #57534e;
+  /* 档案 Tab 通用标题（职业履历 / 社交网络 / 蝴蝶效应等统一格式） */
+  #archive-status-root .archive-tab-header {
+    text-align: center;
+    border-bottom: 2px solid #292524;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  #archive-status-root .archive-tab-title {
+    font-size: 2.3rem;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    color: #1c1917;
+    margin-bottom: 0.5rem;
+  }
+
+  #archive-status-root .archive-tab-decoration {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    font-size: 2.5rem;
+    opacity: 0.6;
   }
 
   #archive-status-root .doc-body {
@@ -389,28 +355,16 @@ const ARCHIVE_STATUS_STYLES = `
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   }
 
-  #archive-status-root .career-header {
-    text-align: center;
-    border-bottom: 2px solid #92400e;
-    padding-bottom: 1.5rem;
-    margin-bottom: 2rem;
-    position: relative;
+  #archive-status-root .career-doc .archive-tab-header {
+    border-bottom-color: #92400e;
   }
-
-  #archive-status-root .career-title {
-    font-size: 1.75rem;
-    font-weight: bold;
-    letter-spacing: 0.2em;
+  #archive-status-root .doc-subtitle {
+    font-size: 0.7rem;   /* 或你想要的 rem/px */
+    letter-spacing: 0.1em;
+    color: #57534e;
+  }
+  #archive-status-root .career-doc .archive-tab-title {
     color: #78350f;
-    margin-bottom: 0.5rem;
-  }
-
-  #archive-status-root .star-decoration {
-    position: absolute;
-    top: -0.5rem;
-    right: -0.5rem;
-    font-size: 2.5rem;
-    opacity: 0.6;
   }
 
   #archive-status-root .assessment-box {
@@ -522,7 +476,7 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .balance-amount {
-    font-size: 2.5rem;
+    font-size: 1.5rem;
     font-weight: bold;
     color: #047857;
   }
@@ -534,7 +488,7 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .transaction-section {
-    padding: 1.5rem;
+    padding: 1rem 0.4rem;
   }
 
   #archive-status-root .transaction-table {
@@ -664,7 +618,7 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .receivables-section {
     background: #dbeafe;
     border-top: 2px solid #93c5fd;
-    padding: 1.5rem;
+    padding: 1rem 0.4rem;
   }
 
   #archive-status-root .receivables-grid {
@@ -693,7 +647,7 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .expenses-section {
-    padding: 1.5rem;
+    padding: 1rem 0.4rem;
     border-top: 2px solid #d6d3d1;
   }
 
@@ -715,7 +669,7 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .contract-section {
     background: #dbeafe;
     border-top: 2px solid #93c5fd;
-    padding: 1.5rem;
+    padding: 1rem 0.4rem;
   }
 
   #archive-status-root .contract-title {
@@ -733,7 +687,7 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .assets-section {
     background: #fafaf9;
     border-top: 2px solid #d6d3d1;
-    padding: 1.5rem;
+    padding: 1rem 0.4rem;
   }
 
   #archive-status-root .asset-category {
@@ -782,124 +736,100 @@ const ARCHIVE_STATUS_STYLES = `
     color: #78716c;
   }
 
-  /* ===== 世界动态样式（参考 archive-system.html world 部分） ===== */
+  /* ===== 世界动态样式（报纸版式：仅三条新闻，无当前状态） ===== */
   #archive-status-root .world-doc {
-    background: white;
+    background: #fff;
     border: 2px solid #292524;
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-    padding: 2rem;
+    padding: 1.25rem 1.5rem;
+    font-family: Georgia, "Times New Roman", serif;
+    color: #1a1a1a;
+    line-height: 1.5;
   }
 
-  #archive-status-root .world-header {
-    text-align: center;
-    border-bottom: 4px double #292524;
-    padding-bottom: 1.5rem;
-    margin-bottom: 2rem;
+  /* 报头 */
+  #archive-status-root .world-masthead {
+    padding: 0 0 0.75rem;
   }
 
-  #archive-status-root .world-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  #archive-status-root .world-title {
-    font-size: 1.875rem;
-    font-weight: bold;
-    letter-spacing: 0.2em;
-    color: #1c1917;
-  }
-
-  #archive-status-root .world-subtitle {
+  #archive-status-root .world-masthead-top {
+    display: table;
+    width: 100%;
+    font-family: Arial, Helvetica, sans-serif;
     font-size: 0.875rem;
-    color: #78716c;
-    margin-top: 0.5rem;
+    font-weight: 400;
+    color: #000;
   }
 
-  #archive-status-root .update-time {
-    font-size: 0.625rem;
-    color: #a8a29e;
-    margin-top: 0.5rem;
+  #archive-status-root .world-masthead-edition {
+    display: table-cell;
+    text-align: left;
   }
 
-  #archive-status-root .status-box {
-    background: #cffafe;
-    border: 2px solid #06b6d4;
-    border-radius: 0.5rem;
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
+  #archive-status-root .world-masthead-date {
+    display: table-cell;
+    text-align: right;
   }
 
-  #archive-status-root .status-title {
-    font-size: 1.125rem;
-    font-weight: bold;
-    color: #164e63;
-    margin-bottom: 0.75rem;
+  #archive-status-root .world-masthead-rule {
+    width: 100%;
+    height: 1px;
+    background: #000;
+    margin: 0.5rem 0;
+    border: 0;
   }
 
-  #archive-status-root .status-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #a5f3fc;
+  #archive-status-root .world-masthead-title-line {
+    width: 100%;
+    height: 1px;
+    background: #000;
+    margin: 0.35rem 0;
   }
 
-  #archive-status-root .status-item:last-child {
-    border-bottom: none;
+  #archive-status-root .world-doc .world-title {
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-align: center;
+    margin: 0;
+    color: #000;
   }
 
-  #archive-status-root .status-label {
-    color: #57534e;
-    font-weight: 600;
+  /* 三条新闻（报纸文章块） */
+  #archive-status-root .world-doc .news-section {
+    margin-bottom: 1.25rem;
   }
 
-  #archive-status-root .status-value {
+  #archive-status-root .world-doc .news-section:last-of-type {
+    margin-bottom: 0;
+  }
+
+  #archive-status-root .world-doc .news-title {
+    font-size: 1.1rem;
+    font-weight: 700;
     color: #1c1917;
+    margin: 0 0 0.35rem;
+    padding-bottom: 0.2rem;
+    border-bottom: 1px solid #d6d3d1;
   }
 
-  #archive-status-root .news-section {
-    margin-bottom: 1.5rem;
+  #archive-status-root .world-doc .news-content {
+    padding: 0;
+    background: transparent;
+    border-left: none;
   }
 
-  #archive-status-root .news-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-
-  #archive-status-root .news-indicator {
-    width: 0.25rem;
-    height: 1.5rem;
-    border-radius: 9999px;
-  }
-
-  #archive-status-root .indicator-red { background: #dc2626; }
-  #archive-status-root .indicator-blue { background: #3b82f6; }
-  #archive-status-root .indicator-pink { background: #ec4899; }
-
-  #archive-status-root .news-title {
-    font-size: 1.125rem;
-    font-weight: bold;
-    color: #1c1917;
-  }
-
-  #archive-status-root .news-content {
-    padding: 1rem;
-  }
-
-  #archive-status-root .news-red { background: #fee2e2; border-left: 4px solid #dc2626; }
-  #archive-status-root .news-blue { background: #dbeafe; border-left: 4px solid #3b82f6; }
-  #archive-status-root .news-pink { background: #fce7f3; border-left: 4px solid #ec4899; }
-
-  #archive-status-root .news-text {
+  #archive-status-root .world-doc .news-text {
     color: #292524;
     line-height: 1.6;
+    margin: 0;
+    font-size: 0.95rem;
   }
 
   #archive-status-root .world-footer {
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid #d6d3d1;
+    margin-top: 1.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #000;
     text-align: center;
     font-size: 0.625rem;
     color: #78716c;
@@ -925,32 +855,6 @@ const ARCHIVE_STATUS_STYLES = `
     border: 2px solid #a8a29e;
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
     padding: 2rem;
-  }
-
-  #archive-status-root .network-header {
-    text-align: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 2px solid #292524;
-  }
-
-  #archive-status-root .network-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  #archive-status-root .network-title {
-    font-size: 1.875rem;
-    font-weight: bold;
-    letter-spacing: 0.2em;
-    color: #1c1917;
-  }
-
-  #archive-status-root .network-subtitle {
-    font-size: 0.625rem;
-    color: #78716c;
-    margin-top: 0.5rem;
-    letter-spacing: 0.3em;
   }
 
   #archive-status-root .recent-interactions {
@@ -988,6 +892,7 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root .relationships-section {
     margin-bottom: 2rem;
+    padding: 1rem 0.25rem;
   }
 
   #archive-status-root .relationship-card {
@@ -1088,79 +993,33 @@ const ARCHIVE_STATUS_STYLES = `
     border: 1px solid #a8a29e;
   }
 
-  /* ===== 蝴蝶效应样式（参考 archive-system.html） ===== */
+  /* ===== 蝴蝶效应样式（与职业履历等统一标题格式，无特殊格式） ===== */
   #archive-status-root .butterfly-doc {
-    background: #1c1917;
-    border: 4px solid black;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    background: white;
+    border: 2px solid #292524;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     padding: 2rem;
   }
 
-  #archive-status-root .butterfly-header {
-    background: linear-gradient(to right, #581c87, #4c1d95);
-    color: white;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    position: relative;
-  }
-
-  #archive-status-root .classified-badge {
-    position: absolute;
-    top: -0.5rem;
-    right: -0.5rem;
-    background: #7c3aed;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.625rem;
-    font-weight: bold;
-    transform: rotate(12deg);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    animation: archive-badge-pulse 2s infinite;
-  }
-
-  @keyframes archive-badge-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-
-  #archive-status-root .butterfly-header-top {
-    font-size: 0.625rem;
-    opacity: 0.8;
-    margin-bottom: 0.25rem;
-    letter-spacing: 0.1em;
-  }
-
-  #archive-status-root .butterfly-header-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    letter-spacing: 0.15em;
-  }
-
-  #archive-status-root .butterfly-icon {
-    font-size: 2.5rem;
-  }
-
   #archive-status-root .butterfly-inner {
-    background: #fef9f3;
-    padding: 1.5rem;
-    font-family: monospace;
+    padding: 0;
     font-size: 0.875rem;
   }
 
-  #archive-status-root .system-note {
+  #archive-status-root .butterfly-inner .system-note {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #c084fc;
+    border-bottom: 1px solid #d6d3d1;
   }
 
-  #archive-status-root .note-title {
-    font-size: 0.625rem;
-    color: #78716c;
-    margin-bottom: 0.75rem;
-    letter-spacing: 0.2em;
+  #archive-status-root .butterfly-inner .note-title {
+    font-size: 0.75rem;
+    color: #57534e;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
   }
 
-  #archive-status-root .note-text {
+  #archive-status-root .butterfly-inner .note-text {
     color: #292524;
     line-height: 1.6;
   }
@@ -1170,8 +1029,8 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .erased-card {
-    background: #fae8ff;
-    border: 2px solid #c084fc;
+    background: #f5f5f4;
+    border: 1px solid #d6d3d1;
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 0.75rem;
@@ -1199,7 +1058,7 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .erased-badge {
-    background: #dc2626;
+    background: #78716c;
     color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
@@ -1232,53 +1091,12 @@ const ARCHIVE_STATUS_STYLES = `
     margin-top: 0.5rem;
   }
 
-  #archive-status-root .warning-box {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 2px solid #c084fc;
-  }
-
-  #archive-status-root .warning-inner {
-    background: #7f1d1d;
-    color: white;
-    padding: 1rem;
-    border-radius: 0.5rem;
-  }
-
-  #archive-status-root .warning-content {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  #archive-status-root .warning-icon {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-  }
-
-  #archive-status-root .warning-text-box {
-    flex: 1;
-  }
-
-  #archive-status-root .warning-title {
-    font-weight: bold;
-    margin-bottom: 0.25rem;
-  }
-
-  #archive-status-root .warning-text {
-    font-size: 0.625rem;
-    line-height: 1.5;
-  }
-
   #archive-status-root .butterfly-footer {
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px solid #c084fc;
-    font-size: 0.625rem;
+    border-top: 1px solid #d6d3d1;
+    font-size: 0.75rem;
     color: #78716c;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
   }
 
   /* 复用原脚本的 card / info-row 等结构，但改成纸质档案风 */
@@ -1507,7 +1325,39 @@ const ARCHIVE_STATUS_STYLES = `
     background: #4b5563;
   }
 
-  /* 响应式：窄屏时整体仍在左上角，与小手机一致 */
+  /* 手机端：遮罩全屏；内容区顶部对齐、可滚动，避免居中时上半部分被裁到屏外 */
+  @media (max-width: 768px) {
+    #project-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100dvh;
+      display: none;
+      background: rgba(0,0,0,0.7);
+      z-index: 2147483647;
+    }
+    #project-modal.show {
+      display: block;
+    }
+    #project-modal .modal-content {
+      position: fixed;
+      left: 50%;
+      top: 0.75rem;
+      transform: translateX(-50%);
+      margin: 0;
+      max-height: calc(100dvh - 1.5rem);
+      overflow-y: auto;
+      width: 92vw;
+      max-width: 420px;
+      z-index: 2147483647;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  /* 响应式：窄屏时整体仍在左上角，与小手机一致；文本不换行/缩小以免手机显示过大 */
   @media (max-width: 768px) {
     #archive-status-root {
       top: 120px;
@@ -1522,7 +1372,46 @@ const ARCHIVE_STATUS_STYLES = `
       height: min(700px, 95vh);
     }
     #archive-status-root .content-area {
-      padding: 0.8rem 0.9rem 0.9rem 0.8rem;
+      padding: 0.8rem 0.5rem 0.9rem 0.5rem;
+    }
+
+    /* 左侧 Tab：图标缩小、不换行（若以后加文字也适用） */
+    #archive-status-root .tab-sidebar {
+      width: 3rem;
+      padding-top: 3rem;
+    }
+    #archive-status-root .tab-label {
+      width: 2.6rem;
+      height: 2.6rem;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    #archive-status-root .tab-icon {
+      font-size: 1rem;
+    }
+
+    /* 内容区大标题：缩小字号、不换行 */
+    #archive-status-root .personal-doc-title {
+      font-size: 1.3rem;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+    #archive-status-root .archive-tab-title {
+      font-size: 1.15rem;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+    #archive-status-root .archive-tab-decoration {
+      font-size: 1.5rem;
+    }
+    #archive-status-root .doc-body {
+      padding: 1rem;
+    }
+    #archive-status-root .section-title {
+      font-size: 0.95rem;
+    }
+    #archive-status-root .stamp-text {
+      font-size: 0.5rem;
     }
 
     /* 手机端：商业概览与应收账款改为单列，表格字号与间距缩小以提升可读性 */
@@ -1576,20 +1465,6 @@ const ARCHIVE_STATUS_TEMPLATE = `
         </div>
       </div>
       <div class="content-area">
-        <div class="archive-header">
-          <div id="archive-status-title" class="archive-title">逐 梦 演 艺 圈</div>
-          <div id="archive-status-subtitle" class="archive-subtitle">ENTERTAINMENT CAREER STATUS</div>
-          <div class="archive-meta">
-            <div>
-              <span>时间:</span>
-              <span id="archive-status-meta-time">待初始化</span>
-            </div>
-            <div class="archive-meta-right">
-              <span>位置:</span>
-              <span id="archive-status-meta-location">待初始化</span>
-            </div>
-          </div>
-        </div>
         <div id="archive-status-content" class="archive-content"></div>
       </div>
     </div>
@@ -1617,6 +1492,217 @@ const archiveState: ArchiveState = {
   isCollapsed: savedCollapse !== null ? savedCollapse === 'true' : true,
 };
 
+// ===== 可复用模板：输出与现有 UI 一致的 HTML，便于维护 =====
+
+/** 信息表单行：多组 label+value，可选 valueColSpan（如 3 表示该 value 占 3 列） */
+function infoTableRow(cells: Array<{ label: string; value: string; valueColSpan?: number }>): string {
+  return `<tr>${cells
+    .map(
+      c =>
+        `<td class="info-label">${c.label}</td><td class="info-value"${c.valueColSpan != null ? ` colspan="${c.valueColSpan}"` : ''}>${c.value}</td>`,
+    )
+    .join('')}</tr>`;
+}
+
+function infoTable(rows: string[]): string {
+  return `<table class="info-table">${rows.join('')}</table>`;
+}
+
+/** 个人档案新标题：机密章 + 归档日期 + 个人档案标题 */
+function personalDocTitleBar(recordDate: string): string {
+  return `
+      <div class="personal-doc-title-bar">
+        <div class="personal-doc-title-wrap">
+          <h1 class="personal-doc-title">个 人 档 案</h1>
+          <div class="personal-doc-date">归档日期: ${recordDate}</div>
+        </div>
+        <div class="confidential-stamp"><div class="stamp-text">机密<br>CONFIDENTIAL</div></div>
+      </div>`;
+}
+
+/** 档案 Tab 通用标题（与职业履历一致的格式：居中标题 + 副标题 + 可选角标） */
+function archiveTabHeader(title: string, subtitle: string, decoration?: string): string {
+  return `
+      <div class="archive-tab-header">
+        <h2 class="archive-tab-title">${title}</h2>
+        <div class="doc-subtitle">${subtitle}</div>
+        ${decoration != null ? `<div class="archive-tab-decoration">${decoration}</div>` : ''}
+      </div>`;
+}
+
+/** 职业履历：行业评估区块 */
+function assessmentBox(title: string, items: Array<{ label: string; value: string }>): string {
+  return `
+      <div class="assessment-box">
+        <h3 class="section-title">${title}</h3>
+        ${items.map(i => `<div class="assessment-item"><span class="assessment-label">${i.label}</span><span class="assessment-value">${i.value}</span></div>`).join('')}
+      </div>`;
+}
+
+/** 带标题的区块 + 列表内容（代表作品、荣誉记录等），sectionClass 默认 works-section */
+function sectionWithList(
+  title: string,
+  items: string[],
+  emptyText: string,
+  itemToHtml: (item: string) => string,
+  sectionClass = 'works-section',
+): string {
+  const content =
+    Array.isArray(items) && items.length > 0
+      ? items.map(itemToHtml).join('')
+      : `<div class="empty-state">${emptyText}</div>`;
+  return `
+      <div class="${sectionClass}">
+        <h3 class="section-title">${title}</h3>
+        ${content}
+      </div>`;
+}
+
+function workItem(text: string): string {
+  return `
+          <div class="work-item">
+            <div class="work-title">${text}</div>
+          </div>`;
+}
+
+/** 交易/对账表：表头 3 列，每行 label、金额串、类型，可选行样式与金额样式 */
+function transactionTable(
+  headers: readonly [string, string, string],
+  rows: Array<{
+    label: string;
+    amount: string;
+    type: string;
+    positive: boolean;
+    rowStyle?: string;
+    amountStyle?: string;
+  }>,
+): string {
+  const [h1, h2, h3] = headers;
+  const tbody = rows
+    .map(
+      r =>
+        `<tr${r.rowStyle != null ? ` style="${r.rowStyle}"` : ''}>
+              <td>${r.label}</td>
+              <td class="${r.positive ? 'amount-positive' : 'amount-negative'}"${r.amountStyle != null ? ` style="${r.amountStyle}"` : ''}>
+                ${r.amount}
+              </td>
+              <td class="transaction-type">${r.type}</td>
+            </tr>`,
+    )
+    .join('');
+  return `
+        <table class="transaction-table">
+          <thead>
+            <tr>
+              <th>${h1}</th>
+              <th>${h2}</th>
+              <th>${h3}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tbody}
+          </tbody>
+        </table>`;
+}
+
+/** 成本表：表头 3 列（如 成本项目、月度支出、占比），行无 amount 正负 */
+function transactionTableCosts(
+  headers: readonly [string, string, string],
+  rows: Array<{ label: string; amount: string; type: string }>,
+  footer?: { label: string; amount: string; type: string },
+): string {
+  const [h1, h2, h3] = headers;
+  const tbody =
+    rows
+      .map(
+        r =>
+          `<tr>
+          <td>${r.label}</td>
+          <td class="amount-negative">${r.amount}</td>
+          <td class="transaction-type">${r.type}</td>
+        </tr>`,
+      )
+      .join('') +
+    (footer != null
+      ? `
+        <tr style="background: #fafaf9; font-weight: bold;">
+          <td>${footer.label}</td>
+          <td class="amount-negative">${footer.amount}</td>
+          <td class="transaction-type">${footer.type}</td>
+        </tr>`
+      : '');
+  return `
+    <table class="transaction-table">
+      <thead>
+        <tr>
+          <th>${h1}</th>
+          <th>${h2}</th>
+          <th>${h3}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tbody}
+      </tbody>
+    </table>`;
+}
+
+/** 收入来源表：固定 6 列表头，每行 名称、规模、单价、成本率、月毛利、操作按钮 */
+function revenueTable(
+  rows: Array<{
+    name: string;
+    scale: string;
+    unitPrice: string;
+    costRate: string;
+    gross: string;
+    projectId: string;
+  }>,
+): string {
+  const safe = (s: string) => s.replace(/"/g, '&quot;');
+  const tbody =
+    rows.length > 0
+      ? rows
+          .map(
+            r =>
+              `
+              <tr>
+                <td>${r.name}</td>
+                <td>${r.scale}</td>
+                <td>${r.unitPrice}</td>
+                <td>${r.costRate}</td>
+                <td class="amount-positive">+${r.gross}</td>
+                <td class="revenue-table-actions">
+                  <span class="btn-small btn-edit-project" data-project-id="${safe(r.projectId)}" title="编辑">✏️</span>
+                  <span class="btn-small btn-delete-project" data-project-id="${safe(r.projectId)}" title="删除">🗑️</span>
+                </td>
+              </tr>
+            `,
+          )
+          .join('')
+      : `
+      <tr>
+        <td colspan="6" style="text-align:center; padding:0.75rem 1rem; font-size:0.875rem; color:#78716c;">
+          暂无月度收入来源
+        </td>
+      </tr>
+    `;
+  return `
+          <table class="revenue-table">
+            <thead>
+              <tr>
+                <th>业务名称</th>
+                <th>规模</th>
+                <th>单价 (¥)</th>
+                <th>成本率</th>
+                <th>月毛利 (¥)</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tbody}
+            </tbody>
+          </table>`;
+}
+
 function renderProtagonistTab(sd: SchemaData): string {
   const name = getVal(sd, 'protagonist.name', '待初始化');
   const age = getVal(sd, 'protagonist._age', 0);
@@ -1627,52 +1713,26 @@ function renderProtagonistTab(sd: SchemaData): string {
   const location = getVal(sd, 'world.currentLocation', '待初始化');
   const kink = getVal(sd, 'protagonist.kink', '无');
 
-  const recordId = 'ENT-XXXX-001';
   const recordDate = getVal(sd, 'world.currentDate', 'XXXX-XX-XX');
+
+  const tableRows = [
+    infoTableRow([
+      { label: '姓名', value: name },
+      { label: '年龄', value: ageStr },
+    ]),
+    infoTableRow([{ label: '出生', value: birthday, valueColSpan: 3 }]),
+    infoTableRow([{ label: '职业', value: occupation, valueColSpan: 3 }]),
+    infoTableRow([{ label: '外貌', value: appearance, valueColSpan: 3 }]),
+    infoTableRow([{ label: '位置', value: location, valueColSpan: 3 }]),
+    infoTableRow([{ label: '标注', value: kink, valueColSpan: 3 }]),
+  ];
 
   return `
     <div>
-      <div class="doc-header">
-        <h1 class="doc-title">个 人 档 案</h1>
-        <div class="doc-subtitle">PERSONAL RECORDS</div>
-        <div class="confidential-stamp">
-          <div class="stamp-text">机密<br>CONFIDENTIAL</div>
-        </div>
-        <div class="doc-meta">
-          <span>档案编号: ${recordId}</span>
-          <span>归档日期: ${recordDate}</span>
-        </div>
-      </div>
+      ${personalDocTitleBar(String(recordDate))}
       <div class="doc-body">
         <div class="doc-accent"></div>
-        <table class="info-table">
-          <tr>
-            <td class="info-label">姓名</td>
-            <td class="info-value">${name}</td>
-            <td class="info-label">年龄</td>
-            <td class="info-value">${ageStr}</td>
-          </tr>
-          <tr>
-            <td class="info-label">出生</td>
-            <td class="info-value" colspan="3">${birthday}</td>
-          </tr>
-          <tr>
-            <td class="info-label">职业</td>
-            <td class="info-value" colspan="3">${occupation}</td>
-          </tr>
-          <tr>
-            <td class="info-label">外貌</td>
-            <td class="info-value" colspan="3">${appearance}</td>
-          </tr>
-          <tr>
-            <td class="info-label">位置</td>
-            <td class="info-value" colspan="3">${location}</td>
-          </tr>
-          <tr>
-            <td class="info-label">标注</td>
-            <td class="info-value" colspan="3">${kink}</td>
-          </tr>
-        </table>
+        ${infoTable(tableRows)}
         <div class="signature-section">
           <div>归档人：_____________</div>
           <div>日期：_____________</div>
@@ -1693,65 +1753,34 @@ function renderCareerTab(sd: SchemaData): string {
   const rep = getVal(sd, 'professionalAssessment.publicReputation', '待初始化');
   const fans = getVal(sd, 'professionalAssessment.fanbase', '待初始化');
 
+  const worksSection = sectionWithList(
+    '🎬 代表作品',
+    Array.isArray(works) ? works : [],
+    '暂无代表作品',
+    w => workItem(w),
+    'works-section',
+  );
+  const awardsSection = sectionWithList(
+    '🏆 荣誉记录',
+    Array.isArray(awards) ? awards : [],
+    '暂无荣誉记录',
+    a => workItem(a),
+    'awards-section',
+  );
+
   return `
     <div class="career-doc">
-      <div class="career-header">
-        <h2 class="career-title">职 业 履 历 档 案</h2>
-        <div class="doc-subtitle">CAREER PORTFOLIO</div>
-        <div class="star-decoration">⭐</div>
-      </div>
+      ${archiveTabHeader('职 业 履 历 档 案', 'CAREER PORTFOLIO', '⭐')}
 
-      <div class="assessment-box">
-        <h3 class="section-title">行业评估</h3>
-        <div class="assessment-item">
-          <span class="assessment-label">当前咖位</span>
-          <span class="assessment-value">${tier}</span>
-        </div>
-        <div class="assessment-item">
-          <span class="assessment-label">媒体情绪</span>
-          <span class="assessment-value">${media}</span>
-        </div>
-        <div class="assessment-item">
-          <span class="assessment-label">公众声誉</span>
-          <span class="assessment-value">${rep}</span>
-        </div>
-        <div class="assessment-item">
-          <span class="assessment-label">粉丝基础</span>
-          <span class="assessment-value">${fans}</span>
-        </div>
-      </div>
+      ${assessmentBox('行业评估', [
+        { label: '当前咖位', value: String(tier) },
+        { label: '媒体情绪', value: String(media) },
+        { label: '公众声誉', value: String(rep) },
+        { label: '粉丝基础', value: String(fans) },
+      ])}
 
-      <div class="works-section">
-        <h3 class="section-title">🎬 代表作品</h3>
-        ${
-          Array.isArray(works) && works.length
-            ? works
-                .map(
-                  w => `
-          <div class="work-item">
-            <div class="work-title">${w}</div>
-          </div>`,
-                )
-                .join('')
-            : '<div class="empty-state">暂无代表作品</div>'
-        }
-      </div>
-
-      <div class="awards-section">
-        <h3 class="section-title">🏆 荣誉记录</h3>
-        ${
-          Array.isArray(awards) && awards.length
-            ? awards
-                .map(
-                  a => `
-          <div class="work-item">
-            <div class="work-title">${a}</div>
-          </div>`,
-                )
-                .join('')
-            : '<div class="empty-state">暂无荣誉记录</div>'
-        }
-      </div>
+      ${worksSection}
+      ${awardsSection}
     </div>
   `;
 }
@@ -1786,14 +1815,52 @@ function renderPersonalTab(sd: SchemaData): string {
 
   const assetsList = renderAssets(assets);
 
+  const transactionRows = [
+    {
+      label: '月固定收入',
+      amount: `+${Number(income).toLocaleString()}`,
+      type: '收入',
+      positive: true,
+    },
+    {
+      label: '月固定支出',
+      amount: `-${Number(expense).toLocaleString()}`,
+      type: '支出',
+      positive: false,
+    },
+    {
+      label: '本轮一次性变动',
+      amount: `${oneTime >= 0 ? '+' : ''}${Number(oneTime).toLocaleString()}`,
+      type: '特殊',
+      positive: oneTime >= 0,
+    },
+    {
+      label: '月度净收入',
+      amount: `${net >= 0 ? '+' : ''}${Number(net).toLocaleString()}`,
+      type: '结余',
+      positive: net >= 0,
+      rowStyle: 'background: #fafaf9; font-weight: bold;',
+      amountStyle: 'font-size: 1.125rem;',
+    },
+  ];
+
+  const assetsListHtml =
+    assetsList === '无'
+      ? '<li class="asset-item"><span class="asset-bullet bullet-stock"></span><span>暂无资产记录</span></li>'
+      : `<li class="asset-item">
+                     <span class="asset-bullet bullet-stock"></span>
+                     <span>${assetsList}</span>
+                   </li>`;
+
   return `
     <div class="account-doc">
       <div class="account-header">
         <div class="account-header-title">PERSONAL ACCOUNT STATEMENT</div>
         <div class="account-header-main">个人账户对账单</div>
-        <div class="account-number">账户编号: 6228 **** **** 1234 | 对账日期: ${String(
-          getVal(sd, 'world.currentDate', 'XXXX-XX-XX'),
-        )}</div>
+        <div class="account-number">
+          <div>账户编号: 6228 **** **** 1234</div>
+          <div>对账日期: ${String(getVal(sd, 'world.currentDate', 'XXXX-XX-XX'))}</div>
+        </div>
       </div>
 
       <div class="balance-section">
@@ -1803,41 +1870,7 @@ function renderPersonalTab(sd: SchemaData): string {
       </div>
 
       <div class="transaction-section">
-        <table class="transaction-table">
-          <thead>
-            <tr>
-              <th>项目</th>
-              <th>金额 (CNY)</th>
-              <th>类型</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>月固定收入</td>
-              <td class="amount-positive">+${Number(income).toLocaleString()}</td>
-              <td class="transaction-type">收入</td>
-            </tr>
-            <tr>
-              <td>月固定支出</td>
-              <td class="amount-negative">-${Number(expense).toLocaleString()}</td>
-              <td class="transaction-type">支出</td>
-            </tr>
-            <tr>
-              <td>本轮一次性变动</td>
-              <td class="${oneTime >= 0 ? 'amount-positive' : 'amount-negative'}">
-                ${oneTime >= 0 ? '+' : ''}${Number(oneTime).toLocaleString()}
-              </td>
-              <td class="transaction-type">特殊</td>
-            </tr>
-            <tr style="background: #fafaf9; font-weight: bold;">
-              <td>月度净收入</td>
-              <td class="${net >= 0 ? 'amount-positive' : 'amount-negative'}" style="font-size: 1.125rem;">
-                ${net >= 0 ? '+' : ''}${Number(net).toLocaleString()}
-              </td>
-              <td class="transaction-type">结余</td>
-            </tr>
-          </tbody>
-        </table>
+        ${transactionTable(['项目', '金额 (CNY)', '类型'] as const, transactionRows)}
       </div>
 
       <div class="contract-section">
@@ -1850,14 +1883,7 @@ function renderPersonalTab(sd: SchemaData): string {
         <div class="asset-category">
           <div class="asset-category-title">综合资产</div>
           <ul class="asset-list">
-            ${
-              assetsList === '无'
-                ? '<li class="asset-item"><span class="asset-bullet bullet-stock"></span><span>暂无资产记录</span></li>'
-                : `<li class="asset-item">
-                     <span class="asset-bullet bullet-stock"></span>
-                     <span>${assetsList}</span>
-                   </li>`
-            }
+            ${assetsListHtml}
           </ul>
         </div>
       </div>
@@ -1897,8 +1923,14 @@ function renderCompanyTab(sd: SchemaData): string {
     return sum + (typeof value === 'number' ? value : parseFloat(String(value)) || 0);
   }, 0);
 
-  // 生成收入来源表格行
-  const projectsRows =
+  const revenueRows: Array<{
+    name: string;
+    scale: string;
+    unitPrice: string;
+    costRate: string;
+    gross: string;
+    projectId: string;
+  }> =
     runningProjects && typeof runningProjects === 'object'
       ? Object.keys(runningProjects)
           .sort((a, b) => {
@@ -1908,39 +1940,23 @@ function renderCompanyTab(sd: SchemaData): string {
           })
           .map(projectId => {
             const project = runningProjects[projectId];
-            if (!project || typeof project !== 'object') return '';
+            if (!project || typeof project !== 'object')
+              return { name: '', scale: '0', unitPrice: '0', costRate: '0%', gross: '0', projectId };
             const name = (project.name as string) ?? projectId;
             const monthlyVolume = Number(project.monthlyVolume ?? 0);
             const unitPrice = Number(project.unitPrice ?? 0);
             const costRate = Number(project.variableCostRate ?? 0.3);
             const gross = Number(project._monthlyGrossProfit ?? monthlyVolume * unitPrice * (1 - costRate));
-            const safeId = String(projectId).replace(/"/g, '&quot;');
-            return `
-              <tr>
-                <td>${name}</td>
-                <td>${monthlyVolume.toLocaleString()}</td>
-                <td>${unitPrice.toLocaleString()}</td>
-                <td>${(costRate * 100).toFixed(0)}%</td>
-                <td class="amount-positive">+${gross.toLocaleString()}</td>
-                <td class="revenue-table-actions">
-                  <span class="btn-small btn-edit-project" data-project-id="${safeId}" title="编辑">✏️</span>
-                  <span class="btn-small btn-delete-project" data-project-id="${safeId}" title="删除">🗑️</span>
-                </td>
-              </tr>
-            `;
+            return {
+              name,
+              scale: monthlyVolume.toLocaleString(),
+              unitPrice: unitPrice.toLocaleString(),
+              costRate: `${(costRate * 100).toFixed(0)}%`,
+              gross: gross.toLocaleString(),
+              projectId,
+            };
           })
-          .join('')
-      : '';
-
-  const projectsBody =
-    projectsRows ||
-    `
-      <tr>
-        <td colspan="6" style="text-align:center; padding:0.75rem 1rem; font-size:0.875rem; color:#78716c;">
-          暂无月度收入来源
-        </td>
-      </tr>
-    `;
+      : [];
 
   // 应收账款：取最近三个月做卡片，所有月份汇总为一行文本
   const allMonths = Object.keys(receivablesObj)
@@ -1967,43 +1983,17 @@ function renderCompanyTab(sd: SchemaData): string {
       ? '全部应收账款：无'
       : '全部应收账款：' + allMonths.map(ym => `${ym} ¥${Number(receivablesObj[ym]).toLocaleString()}`).join('； ');
 
-  const fixedCostsTableRows = fixedCostEntries
-    .map(({ key, label }) => {
-      const value = (fixedCosts as Record<string, unknown>)?.[key];
-      const numValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
-      let ratio = '';
-      if (totalFixedCost > 0) {
-        ratio = `${((numValue / totalFixedCost) * 100).toFixed(1)}%`;
-      }
-      return `
-        <tr>
-          <td>${label}</td>
-          <td class="amount-negative">${numValue.toLocaleString()}</td>
-          <td class="transaction-type">${ratio}</td>
-        </tr>
-      `;
-    })
-    .join('');
-
-  const fixedCostsTable = `
-    <table class="transaction-table">
-      <thead>
-        <tr>
-          <th>成本项目</th>
-          <th>月度支出 (¥)</th>
-          <th>占比</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${fixedCostsTableRows}
-        <tr style="background: #fafaf9; font-weight: bold;">
-          <td>合计</td>
-          <td class="amount-negative">${totalFixedCost.toLocaleString()}</td>
-          <td class="transaction-type">100%</td>
-        </tr>
-      </tbody>
-    </table>
-  `;
+  const fixedCostsRows = fixedCostEntries.map(({ key, label }) => {
+    const value = (fixedCosts as Record<string, unknown>)?.[key];
+    const numValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+    const ratio = totalFixedCost > 0 ? `${((numValue / totalFixedCost) * 100).toFixed(1)}%` : '';
+    return { label, amount: numValue.toLocaleString(), type: ratio };
+  });
+  const fixedCostsTable = transactionTableCosts(['成本项目', '月度支出 (¥)', '占比'] as const, fixedCostsRows, {
+    label: '合计',
+    amount: totalFixedCost.toLocaleString(),
+    type: '100%',
+  });
 
   return `
     <div class="account-doc">
@@ -2011,8 +2001,8 @@ function renderCompanyTab(sd: SchemaData): string {
         <div class="account-header-title">BUSINESS & FINANCIAL REPORT</div>
         <div class="account-header-main">商业项目财务报告</div>
         <div class="account-number">
-          报告编号: BUS-XXXX-Q1 | 报告日期: ${currentDateStr || 'XXXX-XX-XX'}
-          <span class="btn-small btn-recalculate-cash" style="margin-left:8px; cursor:pointer;">🔄 重算现金</span>
+          <div>报告编号: BUS-XXXX-Q1</div>
+          <div>报告日期: ${currentDateStr || 'XXXX-XX-XX'} <span class="btn-small btn-recalculate-cash" style="margin-left:8px; cursor:pointer;">🔄 重算现金</span></div>
         </div>
       </div>
 
@@ -2032,21 +2022,7 @@ function renderCompanyTab(sd: SchemaData): string {
       <div class="transaction-section">
         <div class="section-header">【月度收入来源】</div>
         <div class="revenue-table-wrap">
-          <table class="revenue-table">
-            <thead>
-              <tr>
-                <th>业务名称</th>
-                <th>规模</th>
-                <th>单价 (¥)</th>
-                <th>成本率</th>
-                <th>月毛利 (¥)</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${projectsBody}
-            </tbody>
-          </table>
+          ${revenueTable(revenueRows)}
         </div>
         <div class="btn-add btn-add-project">+ 新增收入来源</div>
       </div>
@@ -2126,11 +2102,7 @@ function renderNetworkTab(sd: SchemaData): string {
   return `
     <div class="network-doc">
       <div class="network-inner">
-        <div class="network-header">
-          <div class="network-icon">📇</div>
-          <h2 class="network-title">社 交 网 络 通 讯 录</h2>
-          <div class="network-subtitle">SOCIAL NETWORK DIRECTORY</div>
-        </div>
+        ${archiveTabHeader('通 讯 录', 'SOCIAL NETWORK DIRECTORY', '📇')}
 
         <div class="recent-interactions">
           <h3 class="recent-title"><span>⚡</span>最近关键互动</h3>
@@ -2157,65 +2129,46 @@ function renderNetworkTab(sd: SchemaData): string {
 
 function renderWorldTab(sd: SchemaData): string {
   const date = getVal(sd, 'world.currentDate', '待初始化');
-  const loc = getVal(sd, 'world.currentLocation', '待初始化');
   const n1 = getVal(sd, 'world.eraNews', '待初始化');
   const n2 = getVal(sd, 'world.industryNews', '待初始化');
   const n3 = getVal(sd, 'world.gossipNews', '待初始化');
 
   return `
     <div class="world-doc">
-      <div class="world-header">
-        <div class="world-icon">🌍</div>
+      <header class="world-masthead">
+        <div class="world-masthead-top">
+          <span class="world-masthead-edition">简报</span>
+          <span class="world-masthead-date">${String(date)}</span>
+        </div>
+        <hr class="world-masthead-rule" aria-hidden="true">
         <h2 class="world-title">世 界 动 态 简 报</h2>
-        <div class="world-subtitle">WORLD NEWS BRIEFING</div>
-        <div class="update-time">更新时间: ${String(date)}</div>
-      </div>
-
-      <div class="status-box">
-        <h3 class="status-title">当前状态</h3>
-        <div class="status-item">
-          <span class="status-label">日期</span>
-          <span class="status-value">${String(date)}</span>
-        </div>
-        <div class="status-item">
-          <span class="status-label">位置</span>
-          <span class="status-value">${loc}</span>
-        </div>
-      </div>
+        <div class="world-masthead-title-line" aria-hidden="true"></div>
+      </header>
 
       <div class="news-section">
-        <div class="news-header">
-          <div class="news-indicator indicator-red"></div>
-          <h3 class="news-title">时代新闻</h3>
-        </div>
-        <div class="news-content news-red">
+        <h3 class="news-title">时代新闻</h3>
+        <div class="news-content">
           <p class="news-text">${n1}</p>
         </div>
       </div>
 
       <div class="news-section">
-        <div class="news-header">
-          <div class="news-indicator indicator-blue"></div>
-          <h3 class="news-title">行业新闻</h3>
-        </div>
-        <div class="news-content news-blue">
+        <h3 class="news-title">行业新闻</h3>
+        <div class="news-content">
           <p class="news-text">${n2}</p>
         </div>
       </div>
 
       <div class="news-section">
-        <div class="news-header">
-          <div class="news-indicator indicator-pink"></div>
-          <h3 class="news-title">八卦新闻</h3>
-        </div>
-        <div class="news-content news-pink">
+        <h3 class="news-title">八卦新闻</h3>
+        <div class="news-content">
           <p class="news-text">${n3}</p>
         </div>
       </div>
 
-      <div class="world-footer">
+      <footer class="world-footer">
         本简报由情报部门整理，内容仅供参考
-      </div>
+      </footer>
     </div>
   `;
 }
@@ -2245,14 +2198,7 @@ function renderButterflyTab(sd: SchemaData): string {
 
   return `
     <div class="butterfly-doc">
-      <div class="butterfly-header">
-        <div class="classified-badge">绝密</div>
-        <div class="butterfly-header-top">CLASSIFIED: BUTTERFLY EFFECT</div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div class="butterfly-header-title">蝴 蝶 效 应 档 案</div>
-          <div class="butterfly-icon">🦋</div>
-        </div>
-      </div>
+      ${archiveTabHeader('蝴 蝶 效 应 档 案', 'BUTTERFLY EFFECT ARCHIVE', '🦋')}
 
       <div class="butterfly-inner">
         <div class="system-note">
@@ -2268,24 +2214,8 @@ function renderButterflyTab(sd: SchemaData): string {
           ${erasedCardsHtml}
         </div>
 
-        <div class="warning-box">
-          <div class="warning-inner">
-            <div class="warning-content">
-              <div class="warning-icon">⚠️</div>
-              <div class="warning-text-box">
-                <div class="warning-title">警告</div>
-                <div class="warning-text">
-                  过度改变时间线可能导致不可预知的后果。
-                  请谨慎行事，每一个选择都可能改变历史。
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div class="butterfly-footer">
-          <div>档案编号: BUTTERFLY-CLASSIFIED</div>
-          <div>密级: 绝密 | 更新: ${String(currentDate)}</div>
+          更新: ${String(currentDate)}
         </div>
       </div>
     </div>
@@ -2364,18 +2294,6 @@ function renderArchive(): void {
     sd = getMvuDataSafe();
   } catch (e) {
     console.warn('档案状态栏获取数据失败:', e);
-    const tab: ArchiveTabKey = archiveState.currentTab || 'protagonist';
-    if (tab === 'protagonist') {
-      $('#archive-status-title').text('逐梦演艺圈');
-      $('#archive-status-subtitle').text('档案状态栏');
-      $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').show();
-      $('#archive-status-root .archive-header').show();
-    } else {
-      $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').hide();
-      $('#archive-status-root .archive-header').hide();
-    }
-    $('#archive-status-meta-time').text('数据加载失败');
-    $('#archive-status-meta-location').text('-');
     $('#archive-status-content').html(
       '<div class="card"><div style="font-size:11px; color:#78716c; padding:8px;">数据加载失败，请确保已选择角色卡并存在最新楼层。</div></div>',
     );
@@ -2383,20 +2301,6 @@ function renderArchive(): void {
   }
 
   const tab: ArchiveTabKey = archiveState.currentTab || 'protagonist';
-  if (tab === 'protagonist') {
-    $('#archive-status-title').text('逐梦演艺圈');
-    $('#archive-status-subtitle').text('在娱乐圈的浮沉中寻找自己的位置 版本：1.0');
-    $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').show();
-    $('#archive-status-root .archive-header').show();
-  } else {
-    $('#archive-status-title, #archive-status-subtitle, #archive-status-root .archive-meta').hide();
-    $('#archive-status-root .archive-header').hide();
-  }
-
-  const timeStr = getVal(sd, 'world.currentDate', '待初始化');
-  const location = getVal(sd, 'world.currentLocation', '待初始化');
-  $('#archive-status-meta-time').text(String(timeStr));
-  $('#archive-status-meta-location').text(String(location));
 
   try {
     $('#archive-status-content').html(renderTabContent(tab, sd));

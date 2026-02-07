@@ -10,7 +10,7 @@ import {
   calculatePersonalCash,
   getCrossedMonths,
   processCompanyCashWithReceivables,
-} from './calc';
+} from '../状态栏_共用/calc';
 import {
   CHECK_READY_INTERVAL_MS,
   CLOCK_DEBOUNCE_MS,
@@ -25,7 +25,7 @@ import {
   POSITIONS,
 } from './config';
 import { getMvuDataSafe, getVal, renderModules } from './render';
-import { setupReadonlyFields } from './readonlyFields';
+import { setupReadonlyFields } from '../状态栏_共用/readonlyFields';
 
 $('#fate-phone-container, #fate-phone-css').remove();
 $(document).off(`.${EVENTS_NS}`);
