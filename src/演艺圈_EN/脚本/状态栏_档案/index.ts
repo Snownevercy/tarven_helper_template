@@ -15,7 +15,9 @@
  * - 与旧状态栏脚本可以并存，彼此 DOM id / CSS 不冲突
  */
 
+import '@fortawesome/fontawesome-free/css/all.min.css';
 import { waitUntil } from 'async-wait-until';
+import { z } from 'zod';
 import { Schema } from '../../schema';
 import {
   calculateMonthCrossing,
@@ -30,6 +32,349 @@ const EVENTS_NS = 'archiveStatus';
 const STORAGE_TAB_KEY = 'archive_status_tab_v1';
 const STORAGE_COLLAPSE_KEY = 'archive_status_collapsed_v1';
 
+// ===== 主题设置：脚本变量 + 统一 CSS 变量 =====
+
+const FONT_SIZE_TIER_OPTIONS = ['xsmall', 'small', 'medium', 'large', 'xlarge'] as const;
+const FONT_SIZE_MAP: Record<(typeof FONT_SIZE_TIER_OPTIONS)[number], string> = {
+  xsmall: '0.75rem',
+  small: '0.875rem',
+  medium: '1rem',
+  large: '1.125rem',
+  xlarge: '1.25rem',
+};
+
+const ArchiveThemeSettingsSchema = z.object({
+  /** 主题预设：仅浅色系 / 深色系 */
+  themePreset: z.enum(['light', 'dark']).default('light'),
+  /** 页面标题字号 */
+  fontSizeTitle: z.enum(FONT_SIZE_TIER_OPTIONS).default('xlarge'),
+  /** 区块标题字号 */
+  fontSizeSection: z.enum(FONT_SIZE_TIER_OPTIONS).default('large'),
+  /** 正文字号 */
+  fontSizeBody: z.enum(FONT_SIZE_TIER_OPTIONS).default('medium'),
+  /** 标签/说明字号 */
+  fontSizeLabel: z.enum(FONT_SIZE_TIER_OPTIONS).default('small'),
+  /** 控件字号 */
+  fontSizeUI: z.enum(FONT_SIZE_TIER_OPTIONS).default('small'),
+  /** 正文字体（可选） */
+  fontFamily: z.string().default("'Songti SC', 'SimSun', serif"),
+  /** 行高倍数（可选） */
+  lineHeight: z.number().min(1).max(2).default(1.5),
+});
+
+type ArchiveThemeSettings = z.infer<typeof ArchiveThemeSettingsSchema>;
+
+const DEFAULT_THEME_SETTINGS: ArchiveThemeSettings = ArchiveThemeSettingsSchema.parse({});
+
+function getArchiveThemeSettings(): ArchiveThemeSettings {
+  try {
+    const vars = getVariables({ type: 'script', script_id: getScriptId() });
+    const raw = _.get(vars, 'archive_theme', {});
+    if (raw && typeof raw === 'object') {
+      if (!['light', 'dark'].includes(raw.themePreset)) raw.themePreset = 'light';
+      // 兼容旧版单一 fontSize：映射到正文与控件，其余用默认
+      if (raw.fontSize != null && raw.fontSizeBody == null) {
+        raw.fontSizeBody = raw.fontSize;
+        raw.fontSizeUI = raw.fontSize;
+      }
+    }
+    return ArchiveThemeSettingsSchema.parse(raw);
+  } catch {
+    return { ...DEFAULT_THEME_SETTINGS };
+  }
+}
+
+function saveArchiveThemeSettings(settings: ArchiveThemeSettings): void {
+  insertOrAssignVariables({ archive_theme: settings }, { type: 'script', script_id: getScriptId() });
+}
+
+/**
+ * 三套参考主题配色（简洁、高对比）：
+ *
+ * 【文档风 default】暖纸色 + 深棕字
+ * - 背景：档案夹 #d4a574，内容区 #f5f1e8
+ * - 文字：主 #1c1917，副 #57534e，边框 #292524
+ * - Tab 激活：蓝/琥珀/绿/青等分色
+ * - 表格/金额/区块：深色表头、绿正红负、浅色区块
+ *
+ * 【浅色系 light】白/浅灰 + 深灰字
+ * - 背景：档案夹 #e5e7eb，内容区 #f9fafb
+ * - 文字：主 #111827，副 #6b7280，边框 #d1d5db
+ * - Tab 激活：统一蓝灰系
+ * - 表格/金额/区块：灰表头、绿正红负、浅灰区块
+ *
+ * 【深色系 dark】深灰底 + 浅字
+ * - 背景：档案夹 #374151，内容区 #1f2937
+ * - 文字：主 #f3f4f6，副 #9ca3af，边框 #4b5563
+ * - Tab 激活：亮色系
+ * - 表格/金额/区块：中灰表头、亮绿亮红、深色区块
+ */
+function getThemeCssVars(settings: ArchiveThemeSettings): { rootCss: string; bodyCss: string } {
+  const { themePreset, fontFamily, lineHeight, fontSizeTitle, fontSizeSection, fontSizeBody, fontSizeLabel, fontSizeUI } = settings;
+  const base = {
+    '--archive-font-size-title': FONT_SIZE_MAP[fontSizeTitle],
+    '--archive-font-size-section': FONT_SIZE_MAP[fontSizeSection],
+    '--archive-font-size-body': FONT_SIZE_MAP[fontSizeBody],
+    '--archive-font-size-label': FONT_SIZE_MAP[fontSizeLabel],
+    '--archive-font-size-ui': FONT_SIZE_MAP[fontSizeUI],
+    '--archive-font-size-base': FONT_SIZE_MAP[fontSizeBody],
+    '--archive-font-family': fontFamily,
+    '--archive-line-height': String(lineHeight),
+  };
+
+  const presets: Record<string, Record<string, string>> = {
+    /* 浅色系：背景 / 表面 / 主色 / 强调色(暖纸) / 数字正 / 数字负 共 6 色 */
+    /* 背景 #F2F2F7 表面 #FFFFFF 主色 #000000 强调 #d4a574 正 #34C759 负 #FF3B30 */
+    light: {
+      ...base,
+      '--archive-bg-folder': '#F2F2F7',
+      '--archive-bg-content': '#F2F2F7',
+      '--archive-fg': '#000000',
+      '--archive-fg-muted': 'rgba(0,0,0,0.6)',
+      '--archive-border': 'rgba(0,0,0,0.12)',
+      '--archive-tab-inactive-fg': 'rgba(0,0,0,0.6)',
+      '--archive-tab-hover-bg': 'rgba(0,0,0,0.06)',
+      '--archive-tab-protagonist': '#d4a574',
+      '--archive-tab-career': '#d4a574',
+      '--archive-tab-personal': '#d4a574',
+      '--archive-tab-company': '#d4a574',
+      '--archive-tab-network': '#d4a574',
+      '--archive-tab-world': '#d4a574',
+      '--archive-tab-butterfly': '#d4a574',
+      '--archive-tab-settings': '#d4a574',
+      '--archive-toggle-collapsed-bg': '#000000',
+      '--archive-toggle-collapsed-fg': '#FFFFFF',
+      '--archive-toggle-expanded-bg': '#F2F2F7',
+      '--archive-toggle-expanded-fg': '#000000',
+      '--archive-card-bg': '#FFFFFF',
+      '--archive-career-doc-border': 'rgba(0,0,0,0.12)',
+      '--archive-career-title': '#000000',
+      '--archive-career-box-bg': '#F2F2F7',
+      '--archive-career-box-border': 'rgba(0,0,0,0.12)',
+      '--archive-career-work-border': '#d4a574',
+      '--archive-career-work-bg': '#F2F2F7',
+      '--archive-career-awards-border': 'rgba(0,0,0,0.12)',
+      '--archive-career-item-fg': '#000000',
+      '--archive-empty-state': 'rgba(0,0,0,0.6)',
+      '--archive-account-header-bg': '#d4a574',
+      '--archive-account-header-fg': '#000000',
+      '--archive-company-header-bg': '#d4a574',
+      '--archive-balance-bg': '#F2F2F7',
+      '--archive-balance-border': 'rgba(0,0,0,0.12)',
+      '--archive-balance-amount': '#34C759',
+      '--archive-table-th-bg': '#d4a574',
+      '--archive-table-th-fg': '#000000',
+      '--archive-table-td-border': 'rgba(0,0,0,0.12)',
+      '--archive-table-row-hover': '#F2F2F7',
+      '--archive-amount-positive': '#34C759',
+      '--archive-amount-negative': '#FF3B30',
+      '--archive-overview-bg': '#F2F2F7',
+      '--archive-overview-border': 'rgba(0,0,0,0.12)',
+      '--archive-overview-card-border': 'rgba(0,0,0,0.12)',
+      '--archive-value-green': '#34C759',
+      '--archive-value-orange': '#FF3B30',
+      '--archive-receivables-bg': '#F2F2F7',
+      '--archive-receivables-border': 'rgba(0,0,0,0.12)',
+      '--archive-receivable-card-border': 'rgba(0,0,0,0.12)',
+      '--archive-receivable-amount': '#34C759',
+      '--archive-disclaimer-bg': '#F2F2F7',
+      '--archive-disclaimer-border': 'rgba(0,0,0,0.12)',
+      '--archive-disclaimer-fg': 'rgba(0,0,0,0.6)',
+      '--archive-btn-add-bg': '#d4a574',
+      '--archive-btn-add-hover-bg': '#c4956a',
+      '--archive-btn-add-fg': '#000000',
+      '--archive-btn-small-bg': '#F2F2F7',
+      '--archive-btn-small-hover': 'rgba(0,0,0,0.06)',
+      '--archive-world-doc-bg': '#FFFFFF',
+      '--archive-world-doc-border': 'rgba(0,0,0,0.12)',
+      '--archive-world-fg': '#000000',
+      '--archive-world-rule': '#000000',
+      '--archive-world-news-title': '#000000',
+      '--archive-world-news-text': '#000000',
+      '--archive-world-footer': 'rgba(0,0,0,0.6)',
+      '--archive-network-outer-bg': '#F2F2F7',
+      '--archive-network-outer-border': 'rgba(0,0,0,0.12)',
+      '--archive-network-inner-bg': '#FFFFFF',
+      '--archive-network-inner-border': 'rgba(0,0,0,0.12)',
+      '--archive-network-recent-bg': '#F2F2F7',
+      '--archive-network-recent-border': 'rgba(0,0,0,0.12)',
+      '--archive-network-tag-bg': '#F2F2F7',
+      '--archive-network-tag-fg': '#000000',
+      '--archive-relationship-card-border': 'rgba(0,0,0,0.12)',
+      '--archive-indicator-low': '#d4a574',
+      '--archive-indicator-mid': '#d4a574',
+      '--archive-indicator-high': '#FF3B30',
+      '--archive-score-low': '#d4a574',
+      '--archive-score-mid': '#d4a574',
+      '--archive-score-high': '#34C759',
+      '--archive-badge-bg': '#F2F2F7',
+      '--archive-badge-fg': '#000000',
+      '--archive-map-tag-bg': '#F2F2F7',
+      '--archive-map-tag-fg': '#000000',
+      '--archive-map-tag-border': 'rgba(0,0,0,0.12)',
+      '--archive-butterfly-doc-border': 'rgba(0,0,0,0.12)',
+      '--archive-erased-bg': '#F2F2F7',
+      '--archive-erased-border': 'rgba(0,0,0,0.12)',
+      '--archive-erased-badge-bg': 'rgba(0,0,0,0.6)',
+      '--archive-erased-badge-fg': '#FFFFFF',
+      '--archive-stable-bg': '#F2F2F7',
+      '--archive-stable-border': '#34C759',
+      '--archive-stable-title': '#34C759',
+      '--archive-stable-text': 'rgba(0,0,0,0.6)',
+      '--archive-info-row-border': 'rgba(0,0,0,0.08)',
+      '--archive-card-title-accent': '#d4a574',
+      '--archive-info-block-bg': '#F2F2F7',
+      '--archive-info-block-border': 'rgba(0,0,0,0.12)',
+      '--archive-signature-fg': 'rgba(0,0,0,0.6)',
+      '--archive-modal-overlay': 'rgba(0,0,0,0.4)',
+      '--archive-modal-bg': '#FFFFFF',
+      '--archive-modal-border': 'rgba(0,0,0,0.12)',
+      '--archive-modal-fg': '#000000',
+      '--archive-modal-label': 'rgba(0,0,0,0.6)',
+      '--archive-modal-input-bg': '#F2F2F7',
+      '--archive-modal-input-border': 'rgba(0,0,0,0.12)',
+      '--archive-modal-primary-bg': '#d4a574',
+      '--archive-modal-primary-fg': '#000000',
+      '--archive-modal-secondary-bg': '#F2F2F7',
+      '--archive-modal-secondary-hover': 'rgba(0,0,0,0.06)',
+    },
+    /* 深色系：背景 / 表面 #121212 / 主色 / 强调色 #dbf8fc / 数字正 #22946E / 数字负 #9C2121 共 6 色 */
+    dark: {
+      ...base,
+      '--archive-bg-folder': '#0D0D0D',
+      '--archive-bg-content': '#0D0D0D',
+      '--archive-fg': '#FFFFFF',
+      '--archive-fg-muted': 'rgba(255,255,255,0.6)',
+      '--archive-border': 'rgba(255,255,255,0.12)',
+      '--archive-tab-inactive-fg': 'rgba(255,255,255,0.6)',
+      '--archive-tab-hover-bg': 'rgba(255,255,255,0.08)',
+      '--archive-tab-protagonist': '#dbf8fc',
+      '--archive-tab-career': '#dbf8fc',
+      '--archive-tab-personal': '#dbf8fc',
+      '--archive-tab-company': '#dbf8fc',
+      '--archive-tab-network': '#dbf8fc',
+      '--archive-tab-world': '#dbf8fc',
+      '--archive-tab-butterfly': '#dbf8fc',
+      '--archive-tab-settings': '#dbf8fc',
+      '--archive-toggle-collapsed-bg': 'rgba(255,255,255,0.2)',
+      '--archive-toggle-collapsed-fg': '#FFFFFF',
+      '--archive-toggle-expanded-bg': '#0D0D0D',
+      '--archive-toggle-expanded-fg': '#FFFFFF',
+      '--archive-card-bg': '#121212',
+      '--archive-career-doc-border': 'rgba(255,255,255,0.12)',
+      '--archive-career-title': '#FFFFFF',
+      '--archive-career-box-bg': '#0D0D0D',
+      '--archive-career-box-border': 'rgba(255,255,255,0.12)',
+      '--archive-career-work-border': '#dbf8fc',
+      '--archive-career-work-bg': '#0D0D0D',
+      '--archive-career-awards-border': 'rgba(255,255,255,0.12)',
+      '--archive-career-item-fg': '#FFFFFF',
+      '--archive-empty-state': 'rgba(255,255,255,0.6)',
+      '--archive-account-header-bg': '#dbf8fc',
+      '--archive-account-header-fg': '#0D0D0D',
+      '--archive-company-header-bg': '#dbf8fc',
+      '--archive-balance-bg': '#0D0D0D',
+      '--archive-balance-border': 'rgba(255,255,255,0.12)',
+      '--archive-balance-amount': '#22946E',
+      '--archive-table-th-bg': '#dbf8fc',
+      '--archive-table-th-fg': '#0D0D0D',
+      '--archive-table-td-border': 'rgba(255,255,255,0.12)',
+      '--archive-table-row-hover': '#121212',
+      '--archive-amount-positive': '#22946E',
+      '--archive-amount-negative': '#9C2121',
+      '--archive-overview-bg': '#0D0D0D',
+      '--archive-overview-border': 'rgba(255,255,255,0.12)',
+      '--archive-overview-card-border': 'rgba(255,255,255,0.12)',
+      '--archive-value-green': '#22946E',
+      '--archive-value-orange': '#9C2121',
+      '--archive-receivables-bg': '#0D0D0D',
+      '--archive-receivables-border': 'rgba(255,255,255,0.12)',
+      '--archive-receivable-card-border': 'rgba(255,255,255,0.12)',
+      '--archive-receivable-amount': '#22946E',
+      '--archive-disclaimer-bg': '#0D0D0D',
+      '--archive-disclaimer-border': 'rgba(255,255,255,0.12)',
+      '--archive-disclaimer-fg': 'rgba(255,255,255,0.6)',
+      '--archive-btn-add-bg': '#dbf8fc',
+      '--archive-btn-add-hover-bg': '#b8eef5',
+      '--archive-btn-add-fg': '#0D0D0D',
+      '--archive-btn-small-bg': '#121212',
+      '--archive-btn-small-hover': 'rgba(255,255,255,0.12)',
+      '--archive-world-doc-bg': '#121212',
+      '--archive-world-doc-border': 'rgba(255,255,255,0.12)',
+      '--archive-world-fg': '#FFFFFF',
+      '--archive-world-rule': 'rgba(255,255,255,0.6)',
+      '--archive-world-news-title': '#FFFFFF',
+      '--archive-world-news-text': '#FFFFFF',
+      '--archive-world-footer': 'rgba(255,255,255,0.6)',
+      '--archive-network-outer-bg': '#0D0D0D',
+      '--archive-network-outer-border': 'rgba(255,255,255,0.12)',
+      '--archive-network-inner-bg': '#121212',
+      '--archive-network-inner-border': 'rgba(255,255,255,0.12)',
+      '--archive-network-recent-bg': '#0D0D0D',
+      '--archive-network-recent-border': 'rgba(255,255,255,0.12)',
+      '--archive-network-tag-bg': '#121212',
+      '--archive-network-tag-fg': '#FFFFFF',
+      '--archive-relationship-card-border': 'rgba(255,255,255,0.12)',
+      '--archive-indicator-low': '#dbf8fc',
+      '--archive-indicator-mid': '#dbf8fc',
+      '--archive-indicator-high': '#9C2121',
+      '--archive-score-low': '#dbf8fc',
+      '--archive-score-mid': '#dbf8fc',
+      '--archive-score-high': '#22946E',
+      '--archive-badge-bg': '#121212',
+      '--archive-badge-fg': '#FFFFFF',
+      '--archive-map-tag-bg': '#121212',
+      '--archive-map-tag-fg': '#FFFFFF',
+      '--archive-map-tag-border': 'rgba(255,255,255,0.12)',
+      '--archive-butterfly-doc-border': 'rgba(255,255,255,0.12)',
+      '--archive-erased-bg': '#0D0D0D',
+      '--archive-erased-border': 'rgba(255,255,255,0.12)',
+      '--archive-erased-badge-bg': 'rgba(255,255,255,0.6)',
+      '--archive-erased-badge-fg': '#FFFFFF',
+      '--archive-stable-bg': '#0D0D0D',
+      '--archive-stable-border': '#22946E',
+      '--archive-stable-title': '#22946E',
+      '--archive-stable-text': 'rgba(255,255,255,0.6)',
+      '--archive-info-row-border': 'rgba(255,255,255,0.08)',
+      '--archive-card-title-accent': '#dbf8fc',
+      '--archive-info-block-bg': '#0D0D0D',
+      '--archive-info-block-border': 'rgba(255,255,255,0.12)',
+      '--archive-signature-fg': 'rgba(255,255,255,0.6)',
+      '--archive-modal-overlay': 'rgba(0,0,0,0.6)',
+      '--archive-modal-bg': '#121212',
+      '--archive-modal-border': 'rgba(255,255,255,0.12)',
+      '--archive-modal-fg': '#FFFFFF',
+      '--archive-modal-label': 'rgba(255,255,255,0.6)',
+      '--archive-modal-input-bg': '#0D0D0D',
+      '--archive-modal-input-border': 'rgba(255,255,255,0.12)',
+      '--archive-modal-primary-bg': '#dbf8fc',
+      '--archive-modal-primary-fg': '#0D0D0D',
+      '--archive-modal-secondary-bg': '#121212',
+      '--archive-modal-secondary-hover': 'rgba(255,255,255,0.12)',
+    },
+  };
+
+  const vars = presets[themePreset] ?? presets.light;
+  const rootEntries = Object.entries(vars);
+  const rootCss = rootEntries.map(([k, v]) => `${k}: ${v}`).join(';\n    ');
+  const modalEntries = rootEntries.filter(([k]) => k.startsWith('--archive-modal-'));
+  const fontSizeKeys = ['--archive-font-size-title', '--archive-font-size-section', '--archive-font-size-body', '--archive-font-size-label', '--archive-font-size-ui'];
+  const bodyFontEntries = fontSizeKeys.map(k => [k, (vars as Record<string, string>)[k]] as const).filter(([, v]) => v != null);
+  const bodyCss = [...bodyFontEntries, ...modalEntries].map(([k, v]) => `${k}: ${v}`).join(';\n    ');
+  return { rootCss, bodyCss };
+}
+
+function applyArchiveTheme(settings: ArchiveThemeSettings): void {
+  const { rootCss, bodyCss } = getThemeCssVars(settings);
+  let $style = $('#archive-status-theme');
+  if ($style.length === 0) {
+    $style = $(`<style id="archive-status-theme"></style>`).appendTo('head');
+  }
+  $style.text(
+    `#archive-status-root {\n    ${rootCss}\n  }\n  body {\n    ${bodyCss}\n  }`,
+  );
+}
+
 // ===== 样式：档案夹外壳 + 复用原卡片元素 =====
 
 const ARCHIVE_STATUS_STYLES = `
@@ -42,8 +387,10 @@ const ARCHIVE_STATUS_STYLES = `
     bottom: auto;
     right: auto;
     z-index: 500;
-    font-family: 'Songti SC', 'SimSun', serif;
-    color: #1c1917;
+    font-family: var(--archive-font-family, 'Songti SC', 'SimSun', serif);
+    font-size: var(--archive-font-size-base, 1rem);
+    line-height: var(--archive-line-height, 1.5);
+    color: var(--archive-fg, #1c1917);
   }
 
   #archive-status-root * {
@@ -58,15 +405,15 @@ const ARCHIVE_STATUS_STYLES = `
     width: 40px;
     height: 40px;
     border-radius: 999px;
-    background: #111827;
-    color: #f9fafb;
+    background: var(--archive-toggle-collapsed-bg, #111827);
+    color: var(--archive-toggle-collapsed-fg, #f9fafb);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
+    font-size: var(--archive-font-size-ui, 1rem);
     box-shadow: 0 10px 25px rgba(0,0,0,0.6);
     cursor: pointer;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--archive-border, #e5e7eb);
     z-index: 510;
   }
 
@@ -80,13 +427,13 @@ const ARCHIVE_STATUS_STYLES = `
     left: 10px;
     top: 60px;
     right: auto;
-    background: #111827;
-    color: #f9fafb;
+    background: var(--archive-toggle-collapsed-bg, #111827);
+    color: var(--archive-toggle-collapsed-fg, #f9fafb);
   }
 
   #archive-status-root:not(.collapsed) #archive-status-toggle {
-    background: #fbbf24;
-    color: #78350f;
+    background: var(--archive-toggle-expanded-bg, #fbbf24);
+    color: var(--archive-toggle-expanded-fg, #78350f);
   }
 
   #archive-status-root .archive-container {
@@ -98,7 +445,7 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .folder-background {
     width: 100%;
     height: 100%;
-    background: #d4a574;
+    background: var(--archive-bg-folder, #d4a574);
     background-image:
       repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.03) 3px),
       repeating-linear-gradient(90deg, rgba(0,0,0,0.03) 0px, transparent 1px, transparent 2px, rgba(0,0,0,0.03) 3px);
@@ -128,7 +475,7 @@ const ARCHIVE_STATUS_STYLES = `
     justify-content: center;
     width: 3rem;
     height: 3.1rem;
-    background: #d4a574;
+    background: var(--archive-bg-folder, #d4a574);
     background-image: repeating-linear-gradient(
       0deg,
       rgba(0,0,0,0.03) 0px,
@@ -138,13 +485,13 @@ const ARCHIVE_STATUS_STYLES = `
     );
     border-radius: 0 0.7rem 0.7rem 0;
     cursor: pointer;
-    color: #5a5a5a;
+    color: var(--archive-tab-inactive-fg, #5a5a5a);
     transition: all 0.2s ease;
     flex-shrink: 0;
   }
 
   #archive-status-root .tab-label:hover {
-    background: #c9a070;
+    background: var(--archive-tab-hover-bg, #c9a070);
     transform: translateX(0.2rem);
   }
 
@@ -154,38 +501,46 @@ const ARCHIVE_STATUS_STYLES = `
     transform: translateX(0.25rem);
   }
 
-  /* 标签高亮配色参照 archive-system.html */
+  /* 标签高亮：统一使用主题变量，便于设置中调整 */
   #archive-status-root .tab-label[data-tab="protagonist"].active {
-    background: #3b82f6; /* 个人档案 */
+    background: var(--archive-tab-protagonist, #3b82f6);
   }
   #archive-status-root .tab-label[data-tab="career"].active {
-    background: #f59e0b; /* 职业履历 */
+    background: var(--archive-tab-career, #f59e0b);
   }
   #archive-status-root .tab-label[data-tab="personal"].active {
-    background: #10b981; /* 个人账户 */
+    background: var(--archive-tab-personal, #10b981);
   }
   #archive-status-root .tab-label[data-tab="company"].active {
-    background: #059669; /* 公司账户 */
+    background: var(--archive-tab-company, #059669);
   }
   #archive-status-root .tab-label[data-tab="network"].active {
-    background: #ec4899; /* 社交网络 */
+    background: var(--archive-tab-network, #ec4899);
   }
   #archive-status-root .tab-label[data-tab="world"].active {
-    background: #06b6d4; /* 世界动态 */
+    background: var(--archive-tab-world, #06b6d4);
   }
   #archive-status-root .tab-label[data-tab="butterfly"].active {
-    background: #8b5cf6; /* 蝴蝶效应 */
+    background: var(--archive-tab-butterfly, #8b5cf6);
+  }
+  #archive-status-root .tab-label[data-tab="settings"].active {
+    background: var(--archive-tab-settings, #64748b);
   }
 
   #archive-status-root .tab-icon {
-    font-size: 1.2rem;
+    font-size: var(--archive-font-size-ui, 1rem);
+  }
+
+  /* 设置按钮固定在侧边栏最下方 */
+  #archive-status-root .tab-label-settings {
+    margin-top: auto;
   }
 
   /* 右侧内容区外壳：允许横向滚动，保证表格与操作列可见 */
   #archive-status-root .content-area {
     flex: 1;
     min-width: 0;
-    background: #f5f1e8;
+    background: var(--archive-bg-content, #f5f1e8);
     background-image:
       repeating-linear-gradient(0deg, rgba(139,123,95,0.02) 0px, transparent 1px, transparent 2px, rgba(139,123,95,0.02) 3px),
       repeating-linear-gradient(90deg, rgba(139,123,95,0.02) 0px, transparent 1px, transparent 2px, rgba(139,123,95,0.02) 3px),
@@ -230,17 +585,17 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .personal-doc-title {
-    font-size: 1.5rem;
+    font-size: var(--archive-font-size-title, 1.125rem);
     font-weight: bold;
     letter-spacing: 0.2em;
-    color: #1c1917;
+    color: var(--archive-fg, #1c1917);
     margin: 0 0 0.25rem 0;
   }
 
   #archive-status-root .personal-doc-date {
-    font-size: 0.75rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
     font-family: monospace;
-    color: #57534e;
+    color: var(--archive-fg-muted, #57534e);
   }
 
   #archive-status-root .personal-doc-title-bar .confidential-stamp {
@@ -263,7 +618,7 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .stamp-text {
     text-align: center;
     color: #dc2626;
-    font-size: 0.625rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
     font-weight: bold;
     line-height: 1.2;
   }
@@ -271,17 +626,17 @@ const ARCHIVE_STATUS_STYLES = `
   /* 档案 Tab 通用标题（职业履历 / 社交网络 / 蝴蝶效应等统一格式） */
   #archive-status-root .archive-tab-header {
     text-align: center;
-    border-bottom: 2px solid #292524;
+    border-bottom: 2px solid var(--archive-border, #292524);
     padding-bottom: 1.5rem;
     margin-bottom: 2rem;
     position: relative;
   }
 
   #archive-status-root .archive-tab-title {
-    font-size: 2.3rem;
+    font-size: var(--archive-font-size-title, 1.25rem);
     font-weight: bold;
     letter-spacing: 0.2em;
-    color: #1c1917;
+    color: var(--archive-fg, #1c1917);
     margin-bottom: 0.5rem;
   }
 
@@ -289,13 +644,13 @@ const ARCHIVE_STATUS_STYLES = `
     position: absolute;
     top: -0.5rem;
     right: -0.5rem;
-    font-size: 2.5rem;
+    font-size: var(--archive-font-size-title, 1.25rem);
     opacity: 0.6;
   }
 
   #archive-status-root .doc-body {
-    background: white;
-    border: 2px solid #292524;
+    background: var(--archive-card-bg, white);
+    border: 2px solid var(--archive-border, #292524);
     padding: 2rem;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     position: relative;
@@ -317,7 +672,7 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .info-table tr {
-    border-bottom: 2px solid #d6d3d1;
+    border-bottom: 2px solid var(--archive-border, #d6d3d1);
   }
 
   #archive-status-root .info-table td {
@@ -325,60 +680,63 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .info-label {
+    font-size: var(--archive-font-size-label, 0.875rem);
     font-weight: bold;
-    color: #57534e;
+    color: var(--archive-fg-muted, #57534e);
     width: 8rem;
     white-space: nowrap;
   }
 
   #archive-status-root .info-value {
-    color: #1c1917;
+    font-size: var(--archive-font-size-body, 1rem);
+    color: var(--archive-fg, #1c1917);
     word-break: keep-all;
   }
 
   #archive-status-root .signature-section {
     margin-top: 2rem;
     padding-top: 1rem;
-    border-top: 1px solid #d6d3d1;
+    border-top: 1px solid var(--archive-border, #d6d3d1);
     display: flex;
     justify-content: flex-end;
     gap: 4rem;
-    font-size: 0.75rem;
-    color: #57534e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-signature-fg, #57534e);
   }
 
   /* ===== 职业履历样式（参考 archive-system.html career 部分） ===== */
   #archive-status-root .career-doc {
-    background: white;
-    border: 2px solid #92400e;
+    background: var(--archive-card-bg, white);
+    border: 2px solid var(--archive-career-doc-border, #92400e);
     padding: 2rem;
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   }
 
   #archive-status-root .career-doc .archive-tab-header {
-    border-bottom-color: #92400e;
+    border-bottom-color: var(--archive-career-doc-border, #92400e);
   }
   #archive-status-root .doc-subtitle {
-    font-size: 0.7rem;   /* 或你想要的 rem/px */
+    font-size: var(--archive-font-size-label, 0.875rem);
     letter-spacing: 0.1em;
-    color: #57534e;
+    color: var(--archive-fg-muted, #57534e);
   }
   #archive-status-root .career-doc .archive-tab-title {
-    color: #78350f;
+    font-size: var(--archive-font-size-title, 1.25rem);
+    color: var(--archive-career-title, #78350f);
   }
 
   #archive-status-root .assessment-box {
-    background: linear-gradient(to right, #fef3c7, #fef9c3);
-    border: 2px solid #fbbf24;
+    background: var(--archive-career-box-bg, #fef3c7);
+    border: 2px solid var(--archive-career-box-border, #fbbf24);
     border-radius: 0.5rem;
     padding: 1.5rem;
     margin-bottom: 2rem;
   }
 
   #archive-status-root .section-title {
-    font-size: 1.125rem;
+    font-size: var(--archive-font-size-section, 1.125rem);
     font-weight: bold;
-    color: #78350f;
+    color: var(--archive-career-title, #78350f);
     margin-bottom: 1rem;
   }
 
@@ -386,7 +744,7 @@ const ARCHIVE_STATUS_STYLES = `
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 0;
-    border-bottom: 1px solid #fde68a;
+    border-bottom: 1px solid var(--archive-career-box-border, #fde68a);
   }
 
   #archive-status-root .assessment-item:last-child {
@@ -394,12 +752,14 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .assessment-label {
+    font-size: var(--archive-font-size-label, 0.875rem);
     font-weight: bold;
-    color: #57534e;
+    color: var(--archive-fg-muted, #57534e);
   }
 
   #archive-status-root .assessment-value {
-    color: #1c1917;
+    font-size: var(--archive-font-size-body, 1rem);
+    color: var(--archive-career-item-fg, #1c1917);
   }
 
   #archive-status-root .works-section {
@@ -407,83 +767,87 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .work-item {
-    border-left: 4px solid #f59e0b;
+    border-left: 4px solid var(--archive-career-work-border, #f59e0b);
     padding-left: 1rem;
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
-    background: #fef3c7;
+    background: var(--archive-career-work-bg, #fef3c7);
     margin-bottom: 0.75rem;
   }
 
   #archive-status-root .work-title {
     font-weight: 600;
-    color: #1c1917;
+    color: var(--archive-career-item-fg, #1c1917);
   }
 
   #archive-status-root .awards-section {
     padding-top: 1.5rem;
-    border-top: 2px solid #fbbf24;
+    border-top: 2px solid var(--archive-career-awards-border, #fbbf24);
   }
 
   #archive-status-root .empty-state {
     text-align: center;
-    color: #78716c;
-    font-size: 0.875rem;
+    color: var(--archive-empty-state, #78716c);
+    font-size: var(--archive-font-size-label, 0.875rem);
     padding: 1rem;
   }
 
   /* ===== 个人账户样式（参考 archive-system.html personal 部分） ===== */
   #archive-status-root .account-doc {
-    background: white;
-    border: 1px solid #d4d4d4;
+    background: var(--archive-card-bg, white);
+    border: 1px solid var(--archive-border, #d4d4d4);
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     font-family: monospace;
   }
 
   #archive-status-root .account-header {
-    background: linear-gradient(to right, #065f46, #047857);
-    color: white;
+    background: var(--archive-account-header-bg, #065f46);
+    color: var(--archive-account-header-fg, white);
     padding: 1.5rem;
   }
 
   #archive-status-root .account-header-title {
-    font-size: 0.625rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
     opacity: 0.8;
     margin-bottom: 0.25rem;
   }
 
+  #archive-status-root .account-recalculate-row {
+    margin-top: 0.5rem;
+  }
+
   #archive-status-root .account-header-main {
-    font-size: 1.5rem;
+    font-size: var(--archive-font-size-title, 1.125rem);
     font-weight: bold;
     letter-spacing: 0.05em;
   }
 
   #archive-status-root .account-number {
-    font-size: 0.625rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
     margin-top: 0.5rem;
   }
 
   #archive-status-root .balance-section {
-    background: #d1fae5;
-    border-bottom: 2px solid #6ee7b7;
+    background: var(--archive-balance-bg, #d1fae5);
+    border-bottom: 2px solid var(--archive-balance-border, #6ee7b7);
     padding: 1.5rem;
   }
 
   #archive-status-root .balance-label {
-    font-size: 0.625rem;
-    color: #57534e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #57534e);
     margin-bottom: 0.25rem;
   }
 
   #archive-status-root .balance-amount {
-    font-size: 1.5rem;
+    font-size: var(--archive-font-size-title, 1rem);
     font-weight: bold;
-    color: #047857;
+    color: var(--archive-balance-amount, #047857);
   }
 
   #archive-status-root .currency-info {
-    font-size: 0.625rem;
-    color: #57534e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #57534e);
     margin-top: 0.5rem;
   }
 
@@ -493,19 +857,20 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root .transaction-table {
     width: 100%;
-    font-size: 0.875rem;
+    font-size: var(--archive-font-size-body, 1rem);
     border-collapse: collapse;
   }
 
   #archive-status-root .transaction-table thead tr {
-    border-bottom: 2px solid #292524;
+    border-bottom: 2px solid var(--archive-table-th-bg, #292524);
   }
 
   #archive-status-root .transaction-table th {
+    font-size: var(--archive-font-size-section, 1.125rem);
     text-align: left;
     padding: 0.75rem;
     font-weight: bold;
-    color: #57534e;
+    color: var(--archive-fg-muted, #57534e);
   }
 
   #archive-status-root .transaction-table th:not(:first-child) {
@@ -514,7 +879,7 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root .transaction-table td {
     padding: 0.75rem;
-    border-bottom: 1px solid #e7e5e4;
+    border-bottom: 1px solid var(--archive-table-td-border, #e7e5e4);
   }
 
   #archive-status-root .transaction-table td:not(:first-child) {
@@ -523,7 +888,8 @@ const ARCHIVE_STATUS_STYLES = `
 
   /* ===== 公司账户：收入表与应收账款（参考 archive-system.html） ===== */
   #archive-status-root .company-header {
-    background: linear-gradient(to right, #047857, #059669);
+    background: var(--archive-company-header-bg, #047857);
+    color: var(--archive-account-header-fg, white);
   }
 
   #archive-status-root .overview-grid {
@@ -531,49 +897,50 @@ const ARCHIVE_STATUS_STYLES = `
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
     padding: 1.5rem;
-    background: #fafaf9;
-    border-bottom: 1px solid #d6d3d1;
+    background: var(--archive-overview-bg, #fafaf9);
+    border-bottom: 1px solid var(--archive-overview-border, #d6d3d1);
   }
 
   #archive-status-root .overview-card {
-    background: white;
-    border: 1px solid #d4d4d4;
+    background: var(--archive-card-bg, white);
+    border: 1px solid var(--archive-overview-card-border, #d4d4d4);
     border-radius: 0.25rem;
     padding: 1rem;
   }
 
   #archive-status-root .overview-card-label {
-    font-size: 0.625rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
     margin-bottom: 0.25rem;
   }
 
   #archive-status-root .overview-card-value {
-    font-size: 1.5rem;
+    font-size: var(--archive-font-size-body, 1rem);
     font-weight: bold;
   }
 
-  #archive-status-root .value-green { color: #047857; }
-  #archive-status-root .value-orange { color: #ea580c; }
+  #archive-status-root .value-green { color: var(--archive-value-green, #047857); }
+  #archive-status-root .value-orange { color: var(--archive-value-orange, #ea580c); }
 
   #archive-status-root .overview-card-caption {
-    font-size: 0.625rem;
-    color: #a8a29e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #a8a29e);
     margin-top: 0.25rem;
   }
 
   #archive-status-root .section-header {
+    font-size: var(--archive-font-size-section, 1.125rem);
     font-weight: bold;
-    color: #292524;
-    border-bottom: 2px solid #292524;
+    color: var(--archive-fg, #292524);
+    border-bottom: 2px solid var(--archive-border, #292524);
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
   }
 
   #archive-status-root .revenue-table {
     width: 100%;
-    font-size: 0.875rem;
-    border: 2px solid #292524;
+    font-size: var(--archive-font-size-body, 1rem);
+    border: 2px solid var(--archive-border, #292524);
     border-collapse: collapse;
   }
 
@@ -583,13 +950,14 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .revenue-table thead {
-    background: #292524;
-    color: white;
+    background: var(--archive-table-th-bg, #292524);
+    color: var(--archive-table-th-fg, white);
   }
 
   #archive-status-root .revenue-table th {
+    font-size: var(--archive-font-size-body, 1rem);
     padding: 0.75rem 1rem;
-    border-right: 1px solid #57534e;
+    border-right: 1px solid var(--archive-fg-muted, #57534e);
     font-weight: bold;
   }
 
@@ -599,8 +967,8 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root .revenue-table td {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #e7e5e4;
-    border-right: 1px solid #e7e5e4;
+    border-bottom: 1px solid var(--archive-table-td-border, #e7e5e4);
+    border-right: 1px solid var(--archive-table-td-border, #e7e5e4);
   }
 
   #archive-status-root .revenue-table td:last-child {
@@ -608,16 +976,16 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .revenue-table tbody tr {
-    background: white;
+    background: var(--archive-card-bg, white);
   }
 
   #archive-status-root .revenue-table tbody tr:hover {
-    background: #d1fae5;
+    background: var(--archive-table-row-hover, #d1fae5);
   }
 
   #archive-status-root .receivables-section {
-    background: #dbeafe;
-    border-top: 2px solid #93c5fd;
+    background: var(--archive-receivables-bg, #dbeafe);
+    border-top: 2px solid var(--archive-receivables-border, #93c5fd);
     padding: 1rem 0.4rem;
   }
 
@@ -628,65 +996,65 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .receivable-card {
-    background: white;
-    border: 1px solid #93c5fd;
+    background: var(--archive-card-bg, white);
+    border: 1px solid var(--archive-receivable-card-border, #93c5fd);
     border-radius: 0.25rem;
     padding: 0.75rem;
   }
 
   #archive-status-root .receivable-month {
-    font-size: 0.625rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
     margin-bottom: 0.25rem;
   }
 
   #archive-status-root .receivable-amount {
-    font-size: 1.125rem;
+    font-size: var(--archive-font-size-body, 1rem);
     font-weight: bold;
-    color: #1e40af;
+    color: var(--archive-receivable-amount, #1e40af);
   }
 
   #archive-status-root .expenses-section {
     padding: 1rem 0.4rem;
-    border-top: 2px solid #d6d3d1;
+    border-top: 2px solid var(--archive-border, #d6d3d1);
   }
 
   #archive-status-root .amount-positive {
-    color: #047857;
+    color: var(--archive-amount-positive, #047857);
     font-weight: 600;
   }
 
   #archive-status-root .amount-negative {
-    color: #dc2626;
+    color: var(--archive-amount-negative, #dc2626);
     font-weight: 600;
   }
 
   #archive-status-root .transaction-type {
-    font-size: 0.625rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
   }
 
   #archive-status-root .contract-section {
-    background: #dbeafe;
-    border-top: 2px solid #93c5fd;
+    background: var(--archive-receivables-bg, #dbeafe);
+    border-top: 2px solid var(--archive-receivables-border, #93c5fd);
     padding: 1rem 0.4rem;
   }
 
   #archive-status-root .contract-title {
-    font-size: 0.875rem;
+    font-size: var(--archive-font-size-section, 1.125rem);
     font-weight: bold;
-    color: #57534e;
+    color: var(--archive-fg-muted, #57534e);
     margin-bottom: 0.5rem;
   }
 
   #archive-status-root .contract-text {
-    font-size: 0.875rem;
-    color: #292524;
+    font-size: var(--archive-font-size-body, 1rem);
+    color: var(--archive-fg, #292524);
   }
 
   #archive-status-root .assets-section {
-    background: #fafaf9;
-    border-top: 2px solid #d6d3d1;
+    background: var(--archive-overview-bg, #fafaf9);
+    border-top: 2px solid var(--archive-border, #d6d3d1);
     padding: 1rem 0.4rem;
   }
 
@@ -699,8 +1067,8 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .asset-category-title {
-    font-size: 0.625rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
     margin-bottom: 0.5rem;
   }
 
@@ -712,8 +1080,8 @@ const ARCHIVE_STATUS_STYLES = `
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.875rem;
-    color: #292524;
+    font-size: var(--archive-font-size-body, 1rem);
+    color: var(--archive-fg, #292524);
     margin-bottom: 0.25rem;
   }
 
@@ -724,26 +1092,26 @@ const ARCHIVE_STATUS_STYLES = `
     flex-shrink: 0;
   }
 
-  #archive-status-root .bullet-realestate { background: #10b981; }
-  #archive-status-root .bullet-vehicle { background: #3b82f6; }
-  #archive-status-root .bullet-stock { background: #8b5cf6; }
+  #archive-status-root .bullet-realestate { background: var(--archive-tab-personal, #10b981); }
+  #archive-status-root .bullet-vehicle { background: var(--archive-tab-protagonist, #3b82f6); }
+  #archive-status-root .bullet-stock { background: var(--archive-tab-butterfly, #8b5cf6); }
 
   #archive-status-root .disclaimer {
-    background: #f5f5f4;
+    background: var(--archive-disclaimer-bg, #f5f5f4);
     padding: 1rem;
-    border-top: 1px solid #d6d3d1;
-    font-size: 0.625rem;
-    color: #78716c;
+    border-top: 1px solid var(--archive-disclaimer-border, #d6d3d1);
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-disclaimer-fg, #78716c);
   }
 
   /* ===== 世界动态样式（报纸版式：仅三条新闻，无当前状态） ===== */
   #archive-status-root .world-doc {
-    background: #fff;
-    border: 2px solid #292524;
+    background: var(--archive-world-doc-bg, #fff);
+    border: 2px solid var(--archive-world-doc-border, #292524);
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     padding: 1.25rem 1.5rem;
     font-family: Georgia, "Times New Roman", serif;
-    color: #1a1a1a;
+    color: var(--archive-world-fg, #1a1a1a);
     line-height: 1.5;
   }
 
@@ -756,9 +1124,9 @@ const ARCHIVE_STATUS_STYLES = `
     display: table;
     width: 100%;
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 0.875rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
     font-weight: 400;
-    color: #000;
+    color: var(--archive-world-fg, #000);
   }
 
   #archive-status-root .world-masthead-edition {
@@ -774,7 +1142,7 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .world-masthead-rule {
     width: 100%;
     height: 1px;
-    background: #000;
+    background: var(--archive-world-rule, #000);
     margin: 0.5rem 0;
     border: 0;
   }
@@ -782,17 +1150,17 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .world-masthead-title-line {
     width: 100%;
     height: 1px;
-    background: #000;
+    background: var(--archive-world-rule, #000);
     margin: 0.35rem 0;
   }
 
   #archive-status-root .world-doc .world-title {
-    font-size: 1.5rem;
+    font-size: var(--archive-font-size-title, 1.25rem);
     font-weight: 900;
     letter-spacing: 0.04em;
     text-align: center;
     margin: 0;
-    color: #000;
+    color: var(--archive-world-fg, #000);
   }
 
   /* 三条新闻（报纸文章块） */
@@ -805,12 +1173,12 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .world-doc .news-title {
-    font-size: 1.1rem;
+    font-size: var(--archive-font-size-section, 1.125rem);
     font-weight: 700;
-    color: #1c1917;
+    color: var(--archive-world-news-title, #1c1917);
     margin: 0 0 0.35rem;
     padding-bottom: 0.2rem;
-    border-bottom: 1px solid #d6d3d1;
+    border-bottom: 1px solid var(--archive-border, #d6d3d1);
   }
 
   #archive-status-root .world-doc .news-content {
@@ -820,55 +1188,55 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .world-doc .news-text {
-    color: #292524;
+    font-size: var(--archive-font-size-body, 1rem);
+    color: var(--archive-world-news-text, #292524);
     line-height: 1.6;
     margin: 0;
-    font-size: 0.95rem;
   }
 
   #archive-status-root .world-footer {
     margin-top: 1.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid #000;
+    border-top: 1px solid var(--archive-world-rule, #000);
     text-align: center;
-    font-size: 0.625rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-world-footer, #78716c);
   }
 
   /* ===== 社交网络样式（参考 archive-system.html） ===== */
   #archive-status-root .network-doc {
-    background: #2a2a2a;
-    border: 4px solid #1a1a1a;
+    background: var(--archive-network-outer-bg, #2a2a2a);
+    border: 4px solid var(--archive-network-outer-border, #1a1a1a);
     box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     padding: 0.25rem;
     border-radius: 0.5rem;
   }
 
   #archive-status-root .network-inner {
-    background: #fef9f3;
+    background: var(--archive-network-inner-bg, #fef9f3);
     background-image: repeating-linear-gradient(
       transparent,
       transparent 29px,
       rgba(139,123,95,0.15) 29px,
       rgba(139,123,95,0.15) 30px
     );
-    border: 2px solid #a8a29e;
+    border: 2px solid var(--archive-network-inner-border, #a8a29e);
     box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
     padding: 2rem;
   }
 
   #archive-status-root .recent-interactions {
-    background: #fef9c3;
-    border: 2px solid #fde047;
+    background: var(--archive-network-recent-bg, #fef9c3);
+    border: 2px solid var(--archive-network-recent-border, #fde047);
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 2rem;
   }
 
   #archive-status-root .recent-title {
-    font-size: 1.125rem;
+    font-size: var(--archive-font-size-section, 1.125rem);
     font-weight: bold;
-    color: #1c1917;
+    color: var(--archive-fg, #1c1917);
     margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
@@ -882,11 +1250,11 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .interaction-tag {
-    background: #fde047;
-    color: #292524;
+    background: var(--archive-network-tag-bg, #fde047);
+    color: var(--archive-network-tag-fg, #292524);
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
-    font-size: 0.875rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
     font-weight: 500;
   }
 
@@ -896,8 +1264,8 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .relationship-card {
-    background: white;
-    border: 2px solid #a8a29e;
+    background: var(--archive-card-bg, white);
+    border: 2px solid var(--archive-relationship-card-border, #a8a29e);
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     padding: 1.25rem;
     margin-bottom: 1rem;
@@ -912,13 +1280,13 @@ const ARCHIVE_STATUS_STYLES = `
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-    border: 2px solid white;
+    border: 2px solid var(--archive-card-bg, white);
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
 
-  #archive-status-root .indicator-low { background: #8b5cf6; }
-  #archive-status-root .indicator-mid { background: #3b82f6; }
-  #archive-status-root .indicator-high { background: #dc2626; }
+  #archive-status-root .indicator-low { background: var(--archive-indicator-low, #8b5cf6); }
+  #archive-status-root .indicator-mid { background: var(--archive-indicator-mid, #3b82f6); }
+  #archive-status-root .indicator-high { background: var(--archive-indicator-high, #dc2626); }
 
   #archive-status-root .relationship-header {
     display: flex;
@@ -931,9 +1299,9 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .relationship-name {
-    font-size: 1.25rem;
+    font-size: var(--archive-font-size-section, 1.125rem);
     font-weight: bold;
-    color: #1c1917;
+    color: var(--archive-fg, #1c1917);
     margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
@@ -941,16 +1309,16 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .recent-badge {
-    background: #fde047;
-    color: #713f12;
-    font-size: 0.625rem;
+    background: var(--archive-badge-bg, #fde047);
+    color: var(--archive-badge-fg, #713f12);
+    font-size: var(--archive-font-size-label, 0.875rem);
     padding: 0.125rem 0.5rem;
     border-radius: 0.25rem;
   }
 
   #archive-status-root .relationship-role {
-    font-size: 0.875rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
   }
 
   #archive-status-root .relationship-score-box {
@@ -958,24 +1326,24 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .score-label {
-    font-size: 0.625rem;
-    color: #a8a29e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #a8a29e);
     margin-bottom: 0.25rem;
   }
 
   #archive-status-root .score-value {
-    font-size: 1.5rem;
+    font-size: var(--archive-font-size-body, 1rem);
     font-weight: bold;
   }
 
-  #archive-status-root .score-low { color: #8b5cf6; }
-  #archive-status-root .score-mid { color: #3b82f6; }
-  #archive-status-root .score-high { color: #16a34a; }
+  #archive-status-root .score-low { color: var(--archive-score-low, #8b5cf6); }
+  #archive-status-root .score-mid { color: var(--archive-score-mid, #3b82f6); }
+  #archive-status-root .score-high { color: var(--archive-score-high, #16a34a); }
 
   #archive-status-root .social-map-section {
     margin-top: 2rem;
     padding-top: 1.5rem;
-    border-top: 2px solid #292524;
+    border-top: 2px solid var(--archive-border, #292524);
   }
 
   #archive-status-root .map-tags {
@@ -985,42 +1353,42 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .map-tag {
-    background: #e7e5e4;
-    color: #292524;
+    background: var(--archive-map-tag-bg, #e7e5e4);
+    color: var(--archive-map-tag-fg, #292524);
     padding: 0.375rem 0.75rem;
     border-radius: 0.5rem;
-    font-size: 0.875rem;
-    border: 1px solid #a8a29e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    border: 1px solid var(--archive-map-tag-border, #a8a29e);
   }
 
   /* ===== 蝴蝶效应样式（与职业履历等统一标题格式，无特殊格式） ===== */
   #archive-status-root .butterfly-doc {
-    background: white;
-    border: 2px solid #292524;
+    background: var(--archive-card-bg, white);
+    border: 2px solid var(--archive-butterfly-doc-border, #292524);
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     padding: 2rem;
   }
 
   #archive-status-root .butterfly-inner {
     padding: 0;
-    font-size: 0.875rem;
+    font-size: var(--archive-font-size-body, 1rem);
   }
 
   #archive-status-root .butterfly-inner .system-note {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #d6d3d1;
+    border-bottom: 1px solid var(--archive-border, #d6d3d1);
   }
 
   #archive-status-root .butterfly-inner .note-title {
-    font-size: 0.75rem;
-    color: #57534e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #57534e);
     margin-bottom: 0.5rem;
     letter-spacing: 0.05em;
   }
 
   #archive-status-root .butterfly-inner .note-text {
-    color: #292524;
+    color: var(--archive-fg, #292524);
     line-height: 1.6;
   }
 
@@ -1029,8 +1397,8 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .erased-card {
-    background: #f5f5f4;
-    border: 1px solid #d6d3d1;
+    background: var(--archive-erased-bg, #f5f5f4);
+    border: 1px solid var(--archive-erased-border, #d6d3d1);
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 0.75rem;
@@ -1048,70 +1416,71 @@ const ARCHIVE_STATUS_STYLES = `
 
   #archive-status-root .erased-title {
     font-weight: bold;
-    color: #1c1917;
+    color: var(--archive-fg, #1c1917);
     margin-bottom: 0.25rem;
   }
 
   #archive-status-root .erased-author {
-    font-size: 0.625rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
   }
 
   #archive-status-root .erased-badge {
-    background: #78716c;
-    color: white;
+    background: var(--archive-erased-badge-bg, #78716c);
+    color: var(--archive-erased-badge-fg, white);
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
-    font-size: 0.625rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
     font-weight: bold;
   }
 
   #archive-status-root .stable-state {
-    background: #dcfce7;
-    border: 2px solid #4ade80;
+    background: var(--archive-stable-bg, #dcfce7);
+    border: 2px solid var(--archive-stable-border, #4ade80);
     border-radius: 0.5rem;
     padding: 1.5rem;
     text-align: center;
   }
 
   #archive-status-root .stable-icon {
-    font-size: 2.5rem;
+    font-size: var(--archive-font-size-ui, 1rem);
     margin-bottom: 0.5rem;
   }
 
   #archive-status-root .stable-title {
+    font-size: var(--archive-font-size-section, 1.125rem);
     font-weight: bold;
-    color: #166534;
+    color: var(--archive-stable-title, #166534);
     margin-bottom: 0.5rem;
   }
 
   #archive-status-root .stable-text {
-    font-size: 0.625rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-stable-text, #78716c);
     margin-top: 0.5rem;
   }
 
   #archive-status-root .butterfly-footer {
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px solid #d6d3d1;
-    font-size: 0.75rem;
-    color: #78716c;
+    border-top: 1px solid var(--archive-border, #d6d3d1);
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
   }
 
   /* 复用原脚本的 card / info-row 等结构，但改成纸质档案风 */
   #archive-status-root .card {
-    background: #fff;
+    background: var(--archive-card-bg, #fff);
     border-radius: 0.6rem;
     padding: 0.6rem 0.75rem;
     margin-bottom: 0.6rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-    border: 1px solid #e7e5e4;
+    border: 1px solid var(--archive-border, #e7e5e4);
   }
 
   #archive-status-root .card-title {
-    font-size: 0.72rem;
-    color: #57534e;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #57534e);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 0.35rem;
@@ -1125,7 +1494,7 @@ const ARCHIVE_STATUS_STYLES = `
     display: block;
     width: 3px;
     height: 0.7rem;
-    background: #991b1b;
+    background: var(--archive-card-title-accent, #991b1b);
     opacity: 0.6;
   }
 
@@ -1134,8 +1503,8 @@ const ARCHIVE_STATUS_STYLES = `
     justify-content: space-between;
     align-items: center;
     padding: 0.15rem 0;
-    font-size: 0.78rem;
-    border-bottom: 1px solid #f4f4f5;
+    font-size: var(--archive-font-size-body, 1rem);
+    border-bottom: 1px solid var(--archive-info-row-border, #f4f4f5);
   }
 
   #archive-status-root .info-row:last-child {
@@ -1143,30 +1512,30 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .info-key {
-    color: #78716c;
+    color: var(--archive-fg-muted, #78716c);
   }
 
   #archive-status-root .info-val {
-    color: #1c1917;
+    color: var(--archive-fg, #1c1917);
     font-weight: 500;
     text-align: right;
   }
 
   #archive-status-root .info-block {
-    font-size: 0.78rem;
-    color: #292524;
+    font-size: var(--archive-font-size-body, 1rem);
+    color: var(--archive-fg, #292524);
     line-height: 1.5;
     margin-top: 0.25rem;
     padding: 0.35rem 0.45rem;
-    background: #fefce8;
+    background: var(--archive-info-block-bg, #fefce8);
     border-radius: 0.4rem;
-    border: 1px solid #facc15;
+    border: 1px solid var(--archive-info-block-border, #facc15);
   }
 
   #archive-status-root .list-item {
     padding: 0.2rem 0;
-    border-bottom: 1px solid #f4f4f5;
-    font-size: 0.78rem;
+    border-bottom: 1px solid var(--archive-info-row-border, #f4f4f5);
+    font-size: var(--archive-font-size-body, 1rem);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1177,26 +1546,26 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #archive-status-root .hl-val {
-    color: #1c1917;
+    color: var(--archive-fg, #1c1917);
     font-weight: 600;
   }
 
   #archive-status-root .dim-val {
-    color: #a1a1aa;
-    font-size: 0.72rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #a1a1aa);
   }
 
   #archive-status-root .btn-small {
     cursor: pointer;
     padding: 0.15rem 0.4rem;
-    font-size: 0.7rem;
-    background: #e5e7eb;
+    font-size: var(--archive-font-size-ui, 1rem);
+    background: var(--archive-btn-small-bg, #e5e7eb);
     border-radius: 999px;
     transition: background 0.15s ease;
   }
 
   #archive-status-root .btn-small:hover {
-    background: #d4d4d8;
+    background: var(--archive-btn-small-hover, #d4d4d8);
   }
 
   /* 月度收入来源表格：操作列编辑/删除按钮拉开间距，减少误触 */
@@ -1209,22 +1578,22 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .btn-add {
     cursor: pointer;
     padding: 0.3rem 0.6rem;
-    font-size: 0.75rem;
-    background: #bbf7d0;
+    font-size: var(--archive-font-size-ui, 1rem);
+    background: var(--archive-btn-add-bg, #bbf7d0);
     border-radius: 999px;
     text-align: center;
     margin-top: 0.4rem;
-    color: #166534;
+    color: var(--archive-btn-add-fg, #166534);
   }
 
   #archive-status-root .btn-add:hover {
-    background: #86efac;
+    background: var(--archive-btn-add-hover-bg, #86efac);
   }
 
   #archive-status-root .receivables-detail-toggle {
     cursor: pointer;
-    font-size: 0.72rem;
-    color: #78716c;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #78716c);
     margin-top: 0.3rem;
   }
 
@@ -1232,14 +1601,14 @@ const ARCHIVE_STATUS_STYLES = `
     margin-top: 0.35rem;
   }
 
-  /* 模态框：直接复用原状态栏脚本的语义样式，但作用域限制在父页面 body 上 */
+  /* 模态框：跟随主题变量，作用域在父页面 body */
   #project-modal {
     position: fixed;
     inset: 0;
     display: none;
     align-items: center;
     justify-content: center;
-    background: rgba(0,0,0,0.7);
+    background: var(--archive-modal-overlay, rgba(0,0,0,0.7));
     z-index: 10000;
   }
 
@@ -1248,18 +1617,18 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #project-modal .modal-content {
-    background: #1f2933;
+    background: var(--archive-modal-bg, #1f2937);
     border-radius: 0.8rem;
     padding: 1.1rem 1.1rem 1rem 1.1rem;
     max-width: 420px;
     width: 92vw;
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #e5e7eb;
+    border: 1px solid var(--archive-modal-border, rgba(255,255,255,0.1));
+    color: var(--archive-modal-fg, #e5e7eb);
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
   #project-modal .modal-title {
-    font-size: 0.95rem;
+    font-size: var(--archive-font-size-title, 1.25rem);
     font-weight: 700;
     margin-bottom: 0.7rem;
   }
@@ -1269,8 +1638,8 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #project-modal .form-label {
-    font-size: 0.7rem;
-    color: #9ca3af;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-modal-label, #9ca3af);
     margin-bottom: 0.15rem;
     display: block;
   }
@@ -1279,15 +1648,15 @@ const ARCHIVE_STATUS_STYLES = `
     width: 100%;
     padding: 0.4rem 0.5rem;
     border-radius: 0.45rem;
-    border: 1px solid rgba(156,163,175,0.8);
-    background: #111827;
-    color: #e5e7eb;
-    font-size: 0.78rem;
+    border: 1px solid var(--archive-modal-input-border, rgba(156,163,175,0.8));
+    background: var(--archive-modal-input-bg, #111827);
+    color: var(--archive-modal-fg, #e5e7eb);
+    font-size: var(--archive-font-size-body, 1rem);
   }
 
   #project-modal .form-input:focus {
     outline: none;
-    border-color: #22c55e;
+    border-color: var(--archive-modal-primary-bg, #22c55e);
     box-shadow: 0 0 0 1px rgba(34,197,94,0.5);
   }
 
@@ -1301,15 +1670,15 @@ const ARCHIVE_STATUS_STYLES = `
   #project-modal .btn-modal {
     border-radius: 999px;
     padding: 0.35rem 0.9rem;
-    font-size: 0.78rem;
+    font-size: var(--archive-font-size-ui, 1rem);
     border: none;
     cursor: pointer;
     transition: background 0.15s ease;
   }
 
   #project-modal .btn-modal-primary {
-    background: #22c55e;
-    color: #052e16;
+    background: var(--archive-modal-primary-bg, #22c55e);
+    color: var(--archive-modal-primary-fg, #052e16);
   }
 
   #project-modal .btn-modal-primary:hover {
@@ -1317,12 +1686,12 @@ const ARCHIVE_STATUS_STYLES = `
   }
 
   #project-modal .btn-modal-secondary {
-    background: #374151;
-    color: #e5e7eb;
+    background: var(--archive-modal-secondary-bg, #374151);
+    color: var(--archive-modal-fg, #e5e7eb);
   }
 
   #project-modal .btn-modal-secondary:hover {
-    background: #4b5563;
+    background: var(--archive-modal-secondary-hover, #4b5563);
   }
 
   /* 手机端：遮罩全屏；内容区顶部对齐、可滚动，避免居中时上半部分被裁到屏外 */
@@ -1368,8 +1737,8 @@ const ARCHIVE_STATUS_STYLES = `
       top: 120px;
     }
     #archive-status-root .archive-container {
-      width: 90vw;
-      height: min(700px, 95vh);
+      width: 85vw;
+      height: min(600px, 90vh);
     }
     #archive-status-root .content-area {
       padding: 0.8rem 0.5rem 0.9rem 0.5rem;
@@ -1387,42 +1756,26 @@ const ARCHIVE_STATUS_STYLES = `
       overflow: hidden;
     }
     #archive-status-root .tab-icon {
-      font-size: 1rem;
+      font-size: var(--archive-font-size-ui, 1rem);
     }
 
-    /* 内容区大标题：缩小字号、不换行 */
+    /* 内容区大标题：沿用变量、不换行 */
     #archive-status-root .personal-doc-title {
-      font-size: 1.3rem;
       letter-spacing: 0.1em;
       white-space: nowrap;
     }
     #archive-status-root .archive-tab-title {
-      font-size: 1.15rem;
       letter-spacing: 0.1em;
       white-space: nowrap;
-    }
-    #archive-status-root .archive-tab-decoration {
-      font-size: 1.5rem;
     }
     #archive-status-root .doc-body {
       padding: 1rem;
     }
-    #archive-status-root .section-title {
-      font-size: 0.95rem;
-    }
-    #archive-status-root .stamp-text {
-      font-size: 0.5rem;
-    }
 
-    /* 手机端：商业概览与应收账款改为单列，表格字号与间距缩小以提升可读性 */
+    /* 手机端：商业概览与应收账款改为单列，表格间距缩小以提升可读性 */
     #archive-status-root .overview-grid,
     #archive-status-root .receivables-grid {
       grid-template-columns: 1fr;
-    }
-
-    #archive-status-root .transaction-table,
-    #archive-status-root .revenue-table {
-      font-size: 0.7rem;
     }
 
     #archive-status-root .transaction-table th,
@@ -1432,10 +1785,92 @@ const ARCHIVE_STATUS_STYLES = `
       padding: 0.45rem 0.4rem;
     }
   }
+
+  /* ===== 设置面板（与其它 tab 统一的档案风容器） ===== */
+  #archive-status-root .settings-panel {
+    background: var(--archive-card-bg, white);
+    border: 2px solid var(--archive-border, #292524);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    padding: 2rem;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  #archive-status-root .settings-panel .archive-tab-header {
+    border-bottom-color: var(--archive-border, #292524);
+  }
+
+  #archive-status-root .settings-form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  #archive-status-root .settings-form-label {
+    display: block;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    font-weight: 600;
+    color: var(--archive-fg-muted, #57534e);
+    margin-bottom: 0.35rem;
+  }
+
+  #archive-status-root .settings-form-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+  }
+  #archive-status-root .settings-form-row:last-child {
+    margin-bottom: 0;
+  }
+  #archive-status-root .settings-form-sublabel {
+    flex: 0 0 5rem;
+    font-size: var(--archive-font-size-label, 0.875rem);
+    color: var(--archive-fg-muted, #57534e);
+  }
+  #archive-status-root .settings-form-row .settings-form-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  #archive-status-root .settings-form-select,
+  #archive-status-root .settings-form-input {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--archive-border, #292524);
+    border-radius: 0.5rem;
+    background: var(--archive-bg-content, #fff);
+    color: var(--archive-fg, #1c1917);
+    font-size: var(--archive-font-size-ui, 1rem);
+  }
+
+  #archive-status-root .settings-form-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  #archive-status-root .settings-btn {
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    font-size: var(--archive-font-size-ui, 1rem);
+    cursor: pointer;
+    border: 1px solid var(--archive-border, #292524);
+    background: var(--archive-bg-content, #f5f1e8);
+    color: var(--archive-fg, #1c1917);
+  }
+
+  #archive-status-root .settings-btn:hover {
+    background: var(--archive-tab-hover-bg, rgba(0,0,0,0.06));
+    color: var(--archive-fg, #1c1917);
+  }
+
+  #archive-status-root .settings-custom-row {
+    margin-top: 0.5rem;
+  }
 </style>
 `;
 
-// ===== DOM 模板：档案夹外壳 + 7 个标签 =====
+// ===== DOM 模板：档案夹外壳 + 8 个标签（含设置） =====
 
 const ARCHIVE_STATUS_TEMPLATE = `
 <div id="archive-status-root">
@@ -1443,25 +1878,28 @@ const ARCHIVE_STATUS_TEMPLATE = `
     <div class="folder-background">
       <div class="tab-sidebar">
         <div class="tab-label" data-tab="protagonist" title="个人档案">
-          <span class="tab-icon">👤</span>
+          <span class="tab-icon"><i class="fa-solid fa-user"></i></span>
         </div>
         <div class="tab-label" data-tab="career" title="职业履历">
-          <span class="tab-icon">🏆</span>
+          <span class="tab-icon"><i class="fa-solid fa-trophy"></i></span>
         </div>
         <div class="tab-label" data-tab="personal" title="个人账户">
-          <span class="tab-icon">💰</span>
+          <span class="tab-icon"><i class="fa-solid fa-wallet"></i></span>
         </div>
         <div class="tab-label" data-tab="company" title="公司账户">
-          <span class="tab-icon">🏢</span>
+          <span class="tab-icon"><i class="fa-solid fa-building"></i></span>
         </div>
         <div class="tab-label" data-tab="network" title="社交网络">
-          <span class="tab-icon">👥</span>
+          <span class="tab-icon"><i class="fa-solid fa-people-group"></i></span>
         </div>
         <div class="tab-label" data-tab="world" title="世界动态">
-          <span class="tab-icon">🌍</span>
+          <span class="tab-icon"><i class="fa-solid fa-earth-americas"></i></span>
         </div>
         <div class="tab-label" data-tab="butterfly" title="蝴蝶效应">
-          <span class="tab-icon">🦋</span>
+          <span class="tab-icon"><i class="fa-solid fa-feather"></i></span>
+        </div>
+        <div class="tab-label tab-label-settings" data-tab="settings" title="设置">
+          <span class="tab-icon"><i class="fa-solid fa-gear"></i></span>
         </div>
       </div>
       <div class="content-area">
@@ -1469,7 +1907,7 @@ const ARCHIVE_STATUS_TEMPLATE = `
       </div>
     </div>
   </div>
-  <div id="archive-status-toggle" title="打开/收起档案状态栏">📁</div>
+  <div id="archive-status-toggle" title="打开/收起档案状态栏"><i class="fa-solid fa-folder"></i></div>
 </div>
 `;
 
@@ -1477,7 +1915,15 @@ const ARCHIVE_STATUS_TEMPLATE = `
 
 type SchemaData = ReturnType<typeof getMvuDataSafe>;
 
-type ArchiveTabKey = 'protagonist' | 'career' | 'personal' | 'company' | 'network' | 'world' | 'butterfly';
+type ArchiveTabKey =
+  | 'protagonist'
+  | 'career'
+  | 'personal'
+  | 'company'
+  | 'network'
+  | 'world'
+  | 'butterfly'
+  | 'settings';
 
 type ArchiveState = {
   currentTab: ArchiveTabKey;
@@ -1711,20 +2157,15 @@ function renderProtagonistTab(sd: SchemaData): string {
   const occupation = getVal(sd, 'protagonist.occupation', '待初始化');
   const appearance = getVal(sd, 'protagonist.appearance', '待初始化');
   const location = getVal(sd, 'world.currentLocation', '待初始化');
-  const kink = getVal(sd, 'protagonist.kink', '无');
-
   const recordDate = getVal(sd, 'world.currentDate', 'XXXX-XX-XX');
 
   const tableRows = [
-    infoTableRow([
-      { label: '姓名', value: name },
-      { label: '年龄', value: ageStr },
-    ]),
+    infoTableRow([{ label: '姓名', value: name, valueColSpan: 3 }]),
+    infoTableRow([{ label: '年龄', value: ageStr, valueColSpan: 3 }]),
     infoTableRow([{ label: '出生', value: birthday, valueColSpan: 3 }]),
     infoTableRow([{ label: '职业', value: occupation, valueColSpan: 3 }]),
     infoTableRow([{ label: '外貌', value: appearance, valueColSpan: 3 }]),
     infoTableRow([{ label: '位置', value: location, valueColSpan: 3 }]),
-    infoTableRow([{ label: '标注', value: kink, valueColSpan: 3 }]),
   ];
 
   return `
@@ -1770,7 +2211,7 @@ function renderCareerTab(sd: SchemaData): string {
 
   return `
     <div class="career-doc">
-      ${archiveTabHeader('职 业 履 历 档 案', 'CAREER PORTFOLIO', '⭐')}
+      ${archiveTabHeader('职 业 履 历', 'CAREER PORTFOLIO', '<i class="fa-solid fa-star"></i>')}
 
       ${assessmentBox('行业评估', [
         { label: '当前咖位', value: String(tier) },
@@ -1840,7 +2281,6 @@ function renderPersonalTab(sd: SchemaData): string {
       type: '结余',
       positive: net >= 0,
       rowStyle: 'background: #fafaf9; font-weight: bold;',
-      amountStyle: 'font-size: 1.125rem;',
     },
   ];
 
@@ -1860,6 +2300,9 @@ function renderPersonalTab(sd: SchemaData): string {
         <div class="account-number">
           <div>账户编号: 6228 **** **** 1234</div>
           <div>对账日期: ${String(getVal(sd, 'world.currentDate', 'XXXX-XX-XX'))}</div>
+          <div class="account-recalculate-row">
+            <span class="btn-small btn-recalculate-cash-personal" style="cursor:pointer;"><i class="fa-solid fa-arrows-rotate"></i> 重算现金</span>
+          </div>
         </div>
       </div>
 
@@ -2002,7 +2445,10 @@ function renderCompanyTab(sd: SchemaData): string {
         <div class="account-header-main">商业项目财务报告</div>
         <div class="account-number">
           <div>报告编号: BUS-XXXX-Q1</div>
-          <div>报告日期: ${currentDateStr || 'XXXX-XX-XX'} <span class="btn-small btn-recalculate-cash" style="margin-left:8px; cursor:pointer;">🔄 重算现金</span></div>
+          <div>报告日期: ${currentDateStr || 'XXXX-XX-XX'}</div>
+          <div class="account-recalculate-row">
+            <span class="btn-small btn-recalculate-cash-company" style="cursor:pointer;"><i class="fa-solid fa-arrows-rotate"></i> 重算现金</span>
+          </div>
         </div>
       </div>
 
@@ -2102,7 +2548,7 @@ function renderNetworkTab(sd: SchemaData): string {
   return `
     <div class="network-doc">
       <div class="network-inner">
-        ${archiveTabHeader('通 讯 录', 'SOCIAL NETWORK DIRECTORY', '📇')}
+        ${archiveTabHeader('通 讯 录', 'SOCIAL NETWORK DIRECTORY', '<i class="fa-solid fa-address-book"></i>')}
 
         <div class="recent-interactions">
           <h3 class="recent-title"><span>⚡</span>最近关键互动</h3>
@@ -2198,7 +2644,7 @@ function renderButterflyTab(sd: SchemaData): string {
 
   return `
     <div class="butterfly-doc">
-      ${archiveTabHeader('蝴 蝶 效 应 档 案', 'BUTTERFLY EFFECT ARCHIVE', '🦋')}
+      ${archiveTabHeader('蝴 蝶 效 应 档 案', 'BUTTERFLY EFFECT ARCHIVE', '<i class="fa-solid fa-feather"></i>')}
 
       <div class="butterfly-inner">
         <div class="system-note">
@@ -2222,6 +2668,71 @@ function renderButterflyTab(sd: SchemaData): string {
   `;
 }
 
+function renderSettingsTab(): string {
+  const s = getArchiveThemeSettings();
+  return `
+    <div class="settings-panel">
+      ${archiveTabHeader('设 置', 'ARCHIVE STATUS SETTINGS', '<i class="fa-solid fa-gear"></i>')}
+
+      <div class="settings-form-group">
+        <label class="settings-form-label">整体主题色</label>
+        <select class="settings-form-select archive-theme-preset" data-setting="themePreset">
+          <option value="light" ${s.themePreset === 'light' ? 'selected' : ''}>浅色系</option>
+          <option value="dark" ${s.themePreset === 'dark' ? 'selected' : ''}>深色系</option>
+        </select>
+      </div>
+
+      <div class="settings-form-group">
+        <label class="settings-form-label">字号（5 档）</label>
+        <div class="settings-form-row">
+          <label class="settings-form-sublabel">页面标题</label>
+          <select class="settings-form-select archive-font-size-title" data-setting="fontSizeTitle">
+            ${FONT_SIZE_TIER_OPTIONS.map(v => `<option value="${v}" ${s.fontSizeTitle === v ? 'selected' : ''}>${v === 'xsmall' ? '最小' : v === 'small' ? '小' : v === 'medium' ? '中' : v === 'large' ? '大' : '最大'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="settings-form-row">
+          <label class="settings-form-sublabel">区块标题</label>
+          <select class="settings-form-select archive-font-size-section" data-setting="fontSizeSection">
+            ${FONT_SIZE_TIER_OPTIONS.map(v => `<option value="${v}" ${s.fontSizeSection === v ? 'selected' : ''}>${v === 'xsmall' ? '最小' : v === 'small' ? '小' : v === 'medium' ? '中' : v === 'large' ? '大' : '最大'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="settings-form-row">
+          <label class="settings-form-sublabel">正文</label>
+          <select class="settings-form-select archive-font-size-body" data-setting="fontSizeBody">
+            ${FONT_SIZE_TIER_OPTIONS.map(v => `<option value="${v}" ${s.fontSizeBody === v ? 'selected' : ''}>${v === 'xsmall' ? '最小' : v === 'small' ? '小' : v === 'medium' ? '中' : v === 'large' ? '大' : '最大'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="settings-form-row">
+          <label class="settings-form-sublabel">标签/说明</label>
+          <select class="settings-form-select archive-font-size-label" data-setting="fontSizeLabel">
+            ${FONT_SIZE_TIER_OPTIONS.map(v => `<option value="${v}" ${s.fontSizeLabel === v ? 'selected' : ''}>${v === 'xsmall' ? '最小' : v === 'small' ? '小' : v === 'medium' ? '中' : v === 'large' ? '大' : '最大'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="settings-form-row">
+          <label class="settings-form-sublabel">控件</label>
+          <select class="settings-form-select archive-font-size-ui" data-setting="fontSizeUI">
+            ${FONT_SIZE_TIER_OPTIONS.map(v => `<option value="${v}" ${s.fontSizeUI === v ? 'selected' : ''}>${v === 'xsmall' ? '最小' : v === 'small' ? '小' : v === 'medium' ? '中' : v === 'large' ? '大' : '最大'}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-form-group">
+        <label class="settings-form-label">行高</label>
+        <select class="settings-form-select archive-line-height" data-setting="lineHeight">
+          <option value="1.4" ${s.lineHeight === 1.4 ? 'selected' : ''}>1.4</option>
+          <option value="1.5" ${s.lineHeight === 1.5 ? 'selected' : ''}>1.5</option>
+          <option value="1.6" ${s.lineHeight === 1.6 ? 'selected' : ''}>1.6</option>
+          <option value="1.8" ${s.lineHeight === 1.8 ? 'selected' : ''}>1.8</option>
+        </select>
+      </div>
+
+      <div class="settings-form-actions">
+        <button type="button" class="settings-btn archive-theme-reset">恢复默认</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderTabContent(tab: ArchiveTabKey, sd: SchemaData): string {
   switch (tab) {
     case 'protagonist':
@@ -2238,6 +2749,8 @@ function renderTabContent(tab: ArchiveTabKey, sd: SchemaData): string {
       return renderWorldTab(sd);
     case 'butterfly':
       return renderButterflyTab(sd);
+    case 'settings':
+      return renderSettingsTab();
     default:
       return renderProtagonistTab(sd);
   }
@@ -2318,7 +2831,7 @@ function renderArchive(): void {
 
 function initArchiveStatus(): void {
   // 清理旧实例
-  $('#archive-status-root, #archive-status-css, #project-modal').remove();
+  $('#archive-status-root, #archive-status-css, #archive-status-theme, #project-modal').remove();
   $(document).off(`.${EVENTS_NS}`);
   $(window).off(`.${EVENTS_NS}`);
 
@@ -2353,6 +2866,46 @@ function initArchiveStatus(): void {
     localStorage.setItem(STORAGE_TAB_KEY, tab);
     renderArchive();
   });
+
+  // ===== 设置面板：主题/字号变更与恢复默认 =====
+  const readFormAndApplyTheme = () => {
+    const preset = String($('#archive-status-root .archive-theme-preset').val() || 'light');
+    const lineHeight = parseFloat(String($('#archive-status-root .archive-line-height').val() || '1.5'));
+    const readTier = (sel: string, def: (typeof FONT_SIZE_TIER_OPTIONS)[number]) => {
+      const v = String($(`#archive-status-root ${sel}`).val() || def);
+      return FONT_SIZE_TIER_OPTIONS.includes(v as (typeof FONT_SIZE_TIER_OPTIONS)[number]) ? v : def;
+    };
+    const settings: ArchiveThemeSettings = ArchiveThemeSettingsSchema.parse({
+      themePreset: ['light', 'dark'].includes(preset) ? preset : 'light',
+      fontSizeTitle: readTier('.archive-font-size-title', 'xlarge'),
+      fontSizeSection: readTier('.archive-font-size-section', 'large'),
+      fontSizeBody: readTier('.archive-font-size-body', 'medium'),
+      fontSizeLabel: readTier('.archive-font-size-label', 'small'),
+      fontSizeUI: readTier('.archive-font-size-ui', 'small'),
+      lineHeight: Number.isFinite(lineHeight) ? lineHeight : 1.5,
+    });
+    saveArchiveThemeSettings(settings);
+    applyArchiveTheme(settings);
+    if (archiveState.currentTab === 'settings') renderArchive();
+  };
+
+  container.on(`change.${EVENTS_NS}`, '.archive-theme-preset', readFormAndApplyTheme);
+  container.on(
+    `change.${EVENTS_NS}`,
+    '.archive-font-size-title, .archive-font-size-section, .archive-font-size-body, .archive-font-size-label, .archive-font-size-ui, .archive-line-height',
+    readFormAndApplyTheme,
+  );
+
+  container.on(`click.${EVENTS_NS}`, '.archive-theme-reset', () => {
+    const settings = { ...DEFAULT_THEME_SETTINGS };
+    saveArchiveThemeSettings(settings);
+    applyArchiveTheme(settings);
+    renderArchive();
+    toastr.success('已恢复默认设置');
+  });
+
+  // 初始化时应用已保存的主题
+  applyArchiveTheme(getArchiveThemeSettings());
 
   // ===== 商业账户：新增 / 编辑 / 删除 / 重算现金 =====
 
@@ -2520,7 +3073,7 @@ function initArchiveStatus(): void {
     }
   };
 
-  const recalculateCash = async () => {
+  const recalculateCash = async (mode: 'personal' | 'company') => {
     try {
       const currentVariables = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
       const currentStatData = Schema.parse(_.get(currentVariables, 'stat_data', {}));
@@ -2536,17 +3089,6 @@ function initArchiveStatus(): void {
       const oldCurrentDate = _.get(oldStatData, 'world.currentDate');
       const newCurrentDate = _.get(currentStatData, 'world.currentDate');
 
-      const oldCompanyCash = _.get(oldStatData, 'companyAccount._cash', 0);
-      const companyOneTimeChange = _.get(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
-      const oldFixedCosts = _.get(oldStatData, 'companyAccount.monthlyFixedExpenses', {});
-      const oldRunningProjects = _.get(oldStatData, 'companyAccount.monthlyRevenueSources', {});
-      const oldReceivables = _.get(oldStatData, 'companyAccount.$receivablesByDueMonth', {}) as Record<string, number>;
-
-      const oldPersonalCash = _.get(oldStatData, 'personalAccount._cash', 0);
-      const personalOneTimeChange = _.get(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
-      const oldMonthlyIncome = _.get(oldStatData, 'personalAccount.monthlyFixedIncome', 0);
-      const oldMonthlyExpense = _.get(oldStatData, 'personalAccount.monthlyFixedExpense', 0);
-
       const datesValid =
         oldCurrentDate &&
         newCurrentDate &&
@@ -2555,85 +3097,75 @@ function initArchiveStatus(): void {
         newCurrentDate !== '待定' &&
         newCurrentDate !== '待初始化';
 
-      if (datesValid) {
-        const monthCrossing = calculateMonthCrossing(oldCurrentDate, newCurrentDate);
-        const crossedMonths = getCrossedMonths(oldCurrentDate, newCurrentDate);
-        const currentYMMatch = String(newCurrentDate).match(/(\d{4})-(\d{2})/);
-        const currentYM = currentYMMatch ? `${currentYMMatch[1]}-${currentYMMatch[2]}` : '';
+      if (mode === 'company') {
+        const oldCompanyCash = _.get(oldStatData, 'companyAccount._cash', 0);
+        const companyOneTimeChange = _.get(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
+        const oldFixedCosts = _.get(oldStatData, 'companyAccount.monthlyFixedExpenses', {});
+        const oldRunningProjects = _.get(oldStatData, 'companyAccount.monthlyRevenueSources', {});
+        const oldReceivables = _.get(oldStatData, 'companyAccount.$receivablesByDueMonth', {}) as Record<string, number>;
 
-        const { cash: calculatedCompanyCash, receivablesByDueMonth: newReceivables } =
-          processCompanyCashWithReceivables(
-            oldCompanyCash,
-            companyOneTimeChange,
-            crossedMonths,
-            currentYM,
-            oldFixedCosts,
-            oldRunningProjects,
-            oldReceivables,
-          );
-
-        const calculatedPersonalCash = calculatePersonalCash(
-          oldPersonalCash,
-          personalOneTimeChange,
-          monthCrossing,
-          oldMonthlyIncome,
-          oldMonthlyExpense,
-        );
-
-        _.set(currentStatData, 'companyAccount._cash', calculatedCompanyCash);
-        _.set(currentStatData, 'companyAccount.$receivablesByDueMonth', newReceivables);
-        _.set(currentStatData, 'personalAccount._cash', calculatedPersonalCash);
-        _.set(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
-        _.set(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
-        _.set(currentVariables, 'stat_data', currentStatData);
-
-        await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
-
-        const payrollCost = Number(_.get(oldFixedCosts, 'payroll')) || 0;
-        const facilityCost = Number(_.get(oldFixedCosts, 'facilityCost')) || 0;
-        const marketingCost = Number(_.get(oldFixedCosts, 'marketingBudget')) || 0;
-        const otherOps = Number(_.get(oldFixedCosts, 'other')) || 0;
-        const totalFixedCost = payrollCost + facilityCost + marketingCost + otherOps;
-
-        let totalMonthlyProfit = 0;
-        if (oldRunningProjects && typeof oldRunningProjects === 'object') {
-          for (const pid in oldRunningProjects as Record<string, { _monthlyGrossProfit?: number }>) {
-            const p = (oldRunningProjects as Record<string, { _monthlyGrossProfit?: number }>)[pid];
-            if (p && typeof p === 'object' && '_monthlyGrossProfit' in p) {
-              totalMonthlyProfit += Number((p as { _monthlyGrossProfit?: number })._monthlyGrossProfit) || 0;
-            }
-          }
+        if (datesValid) {
+          const crossedMonths = getCrossedMonths(oldCurrentDate, newCurrentDate);
+          const currentYMMatch = String(newCurrentDate).match(/(\d{4})-(\d{2})/);
+          const currentYM = currentYMMatch ? `${currentYMMatch[1]}-${currentYMMatch[2]}` : '';
+          const { cash: calculatedCompanyCash, receivablesByDueMonth: newReceivables } =
+            processCompanyCashWithReceivables(
+              oldCompanyCash,
+              companyOneTimeChange,
+              crossedMonths,
+              currentYM,
+              oldFixedCosts,
+              oldRunningProjects,
+              oldReceivables,
+            );
+          _.set(currentStatData, 'companyAccount._cash', calculatedCompanyCash);
+          _.set(currentStatData, 'companyAccount.$receivablesByDueMonth', newReceivables);
+          _.set(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
+          _.set(currentVariables, 'stat_data', currentStatData);
+          await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
+          const msg = `公司现金重算完成！\n旧现金: ¥${Number(oldCompanyCash).toLocaleString()}\n新现金: ¥${calculatedCompanyCash.toLocaleString()}`;
+          toastr.success(msg, '重算现金', { timeOut: 6000 });
+        } else {
+          const currentCompanyCash = _.get(currentStatData, 'companyAccount._cash', 0);
+          const newCompanyCash = Number(currentCompanyCash) + Number(companyOneTimeChange);
+          _.set(currentStatData, 'companyAccount._cash', newCompanyCash);
+          _.set(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
+          _.set(currentVariables, 'stat_data', currentStatData);
+          await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
+          const msg = `公司现金重算完成（简化模式）！\n当前: ¥${Number(currentCompanyCash).toLocaleString()}\n变动: ${companyOneTimeChange >= 0 ? '+' : ''}¥${Number(companyOneTimeChange).toLocaleString()}\n新值: ¥${newCompanyCash.toLocaleString()}`;
+          toastr.success(msg, '重算现金', { timeOut: 6000 });
         }
-
-        const monthlyNet = (Number(oldMonthlyIncome) || 0) - (Number(oldMonthlyExpense) || 0);
-
-        let msg = `现金重算完成！\n\n【公司账户】\n旧现金: ¥${Number(oldCompanyCash).toLocaleString()}\n新现金: ¥${calculatedCompanyCash.toLocaleString()}\n\n【个人账户】\n旧现金: ¥${Number(oldPersonalCash).toLocaleString()}\n新现金: ¥${calculatedPersonalCash.toLocaleString()}`;
-        if (monthCrossing > 0) {
-          msg += `\n\n【跨月计算】\n跨月数: ${monthCrossing}\n公司月度固定支出: ¥${totalFixedCost.toLocaleString()}/月\n公司月毛利: ¥${totalMonthlyProfit.toLocaleString()}/月\n个人月净收入: ¥${monthlyNet.toLocaleString()}/月`;
-        }
-        toastr.success(msg, '重算现金', { timeOut: 8000 });
       } else {
-        const currentCompanyCash = _.get(currentStatData, 'companyAccount._cash', 0);
-        const currentPersonalCash = _.get(currentStatData, 'personalAccount._cash', 0);
-        const newCompanyCash = Number(currentCompanyCash) + Number(companyOneTimeChange);
-        const newPersonalCash = Number(currentPersonalCash) + Number(personalOneTimeChange);
+        const oldPersonalCash = _.get(oldStatData, 'personalAccount._cash', 0);
+        const personalOneTimeChange = _.get(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
+        const oldMonthlyIncome = _.get(oldStatData, 'personalAccount.monthlyFixedIncome', 0);
+        const oldMonthlyExpense = _.get(oldStatData, 'personalAccount.monthlyFixedExpense', 0);
 
-        _.set(currentStatData, 'companyAccount._cash', newCompanyCash);
-        _.set(currentStatData, 'personalAccount._cash', newPersonalCash);
-        _.set(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
-        _.set(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
-        _.set(currentVariables, 'stat_data', currentStatData);
-
-        await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
-
-        const msg = `现金重算完成（简化模式）！\n\n【公司账户】\n当前: ¥${Number(currentCompanyCash).toLocaleString()}\n变动: ${
-          companyOneTimeChange >= 0 ? '+' : ''
-        }¥${Number(companyOneTimeChange).toLocaleString()}\n新值: ¥${newCompanyCash.toLocaleString()}\n\n【个人账户】\n当前: ¥${Number(
-          currentPersonalCash,
-        ).toLocaleString()}\n变动: ${personalOneTimeChange >= 0 ? '+' : ''}¥${Number(
-          personalOneTimeChange,
-        ).toLocaleString()}\n新值: ¥${newPersonalCash.toLocaleString()}`;
-        toastr.success(msg, '重算现金', { timeOut: 8000 });
+        if (datesValid) {
+          const monthCrossing = calculateMonthCrossing(oldCurrentDate, newCurrentDate);
+          const calculatedPersonalCash = calculatePersonalCash(
+            oldPersonalCash,
+            personalOneTimeChange,
+            monthCrossing,
+            oldMonthlyIncome,
+            oldMonthlyExpense,
+          );
+          _.set(currentStatData, 'personalAccount._cash', calculatedPersonalCash);
+          _.set(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
+          _.set(currentVariables, 'stat_data', currentStatData);
+          await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
+          const msg = `个人现金重算完成！\n旧现金: ¥${Number(oldPersonalCash).toLocaleString()}\n新现金: ¥${calculatedPersonalCash.toLocaleString()}`;
+          toastr.success(msg, '重算现金', { timeOut: 6000 });
+        } else {
+          const currentPersonalCash = _.get(currentStatData, 'personalAccount._cash', 0);
+          const newPersonalCash = Number(currentPersonalCash) + Number(personalOneTimeChange);
+          _.set(currentStatData, 'personalAccount._cash', newPersonalCash);
+          _.set(currentStatData, 'personalAccount.oneTimePersonalChange', 0);
+          _.set(currentVariables, 'stat_data', currentStatData);
+          await Mvu.replaceMvuData(currentVariables, { type: 'message', message_id: 'latest' });
+          const msg = `个人现金重算完成（简化模式）！\n当前: ¥${Number(currentPersonalCash).toLocaleString()}\n变动: ${personalOneTimeChange >= 0 ? '+' : ''}¥${Number(personalOneTimeChange).toLocaleString()}\n新值: ¥${newPersonalCash.toLocaleString()}`;
+          toastr.success(msg, '重算现金', { timeOut: 6000 });
+        }
       }
 
       renderArchive();
@@ -2661,9 +3193,13 @@ function initArchiveStatus(): void {
     if (projectId) deleteProject(String(projectId));
   });
 
-  container.on(`click.${EVENTS_NS}`, '.btn-recalculate-cash', e => {
+  container.on(`click.${EVENTS_NS}`, '.btn-recalculate-cash-personal', e => {
     e.stopPropagation();
-    recalculateCash();
+    recalculateCash('personal');
+  });
+  container.on(`click.${EVENTS_NS}`, '.btn-recalculate-cash-company', e => {
+    e.stopPropagation();
+    recalculateCash('company');
   });
 
   container.on(`click.${EVENTS_NS}`, '.receivables-detail-toggle', function (e) {
@@ -2808,7 +3344,7 @@ $(window).on('pagehide', () => {
     clearTimeout(updateTimer);
     updateTimer = null;
   }
-  $('#archive-status-root, #archive-status-css, #project-modal').remove();
+  $('#archive-status-root, #archive-status-css, #archive-status-theme, #project-modal').remove();
   $(document).off(`.${EVENTS_NS}`);
   $(window.parent.document).off(`.${EVENTS_NS}`);
 });
