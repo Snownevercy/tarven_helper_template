@@ -110,7 +110,16 @@ function saveArchiveThemeSettings(settings: ArchiveThemeSettings): void {
  * - 表格/金额/区块：中灰表头、亮绿亮红、深色区块
  */
 function getThemeCssVars(settings: ArchiveThemeSettings): { rootCss: string; bodyCss: string } {
-  const { themePreset, fontFamily, lineHeight, fontSizeTitle, fontSizeSection, fontSizeBody, fontSizeLabel, fontSizeUI } = settings;
+  const {
+    themePreset,
+    fontFamily,
+    lineHeight,
+    fontSizeTitle,
+    fontSizeSection,
+    fontSizeBody,
+    fontSizeLabel,
+    fontSizeUI,
+  } = settings;
   const base = {
     '--archive-font-size-title': FONT_SIZE_MAP[fontSizeTitle],
     '--archive-font-size-section': FONT_SIZE_MAP[fontSizeSection],
@@ -358,8 +367,16 @@ function getThemeCssVars(settings: ArchiveThemeSettings): { rootCss: string; bod
   const rootEntries = Object.entries(vars);
   const rootCss = rootEntries.map(([k, v]) => `${k}: ${v}`).join(';\n    ');
   const modalEntries = rootEntries.filter(([k]) => k.startsWith('--archive-modal-'));
-  const fontSizeKeys = ['--archive-font-size-title', '--archive-font-size-section', '--archive-font-size-body', '--archive-font-size-label', '--archive-font-size-ui'];
-  const bodyFontEntries = fontSizeKeys.map(k => [k, (vars as Record<string, string>)[k]] as const).filter(([, v]) => v != null);
+  const fontSizeKeys = [
+    '--archive-font-size-title',
+    '--archive-font-size-section',
+    '--archive-font-size-body',
+    '--archive-font-size-label',
+    '--archive-font-size-ui',
+  ];
+  const bodyFontEntries = fontSizeKeys
+    .map(k => [k, (vars as Record<string, string>)[k]] as const)
+    .filter(([, v]) => v != null);
   const bodyCss = [...bodyFontEntries, ...modalEntries].map(([k, v]) => `${k}: ${v}`).join(';\n    ');
   return { rootCss, bodyCss };
 }
@@ -370,9 +387,7 @@ function applyArchiveTheme(settings: ArchiveThemeSettings): void {
   if ($style.length === 0) {
     $style = $(`<style id="archive-status-theme"></style>`).appendTo('head');
   }
-  $style.text(
-    `#archive-status-root {\n    ${rootCss}\n  }\n  body {\n    ${bodyCss}\n  }`,
-  );
+  $style.text(`#archive-status-root {\n    ${rootCss}\n  }\n  body {\n    ${bodyCss}\n  }`);
 }
 
 // ===== 样式：档案夹外壳 + 复用原卡片元素 =====
@@ -1915,15 +1930,7 @@ const ARCHIVE_STATUS_TEMPLATE = `
 
 type SchemaData = ReturnType<typeof getMvuDataSafe>;
 
-type ArchiveTabKey =
-  | 'protagonist'
-  | 'career'
-  | 'personal'
-  | 'company'
-  | 'network'
-  | 'world'
-  | 'butterfly'
-  | 'settings';
+type ArchiveTabKey = 'protagonist' | 'career' | 'personal' | 'company' | 'network' | 'world' | 'butterfly' | 'settings';
 
 type ArchiveState = {
   currentTab: ArchiveTabKey;
@@ -3102,7 +3109,10 @@ function initArchiveStatus(): void {
         const companyOneTimeChange = _.get(currentStatData, 'companyAccount.oneTimeCompanyChange', 0);
         const oldFixedCosts = _.get(oldStatData, 'companyAccount.monthlyFixedExpenses', {});
         const oldRunningProjects = _.get(oldStatData, 'companyAccount.monthlyRevenueSources', {});
-        const oldReceivables = _.get(oldStatData, 'companyAccount.$receivablesByDueMonth', {}) as Record<string, number>;
+        const oldReceivables = _.get(oldStatData, 'companyAccount.$receivablesByDueMonth', {}) as Record<
+          string,
+          number
+        >;
 
         if (datesValid) {
           const crossedMonths = getCrossedMonths(oldCurrentDate, newCurrentDate);
