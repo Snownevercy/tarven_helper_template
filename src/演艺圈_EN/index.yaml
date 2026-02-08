@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
-头像: 头像
+头像: 演艺圈模拟器
 版本: ""
 作者: ""
 备注: ""
@@ -301,14 +301,14 @@
         启用: true
         类型: 脚本
         内容: import
-          'https://testingcf.jsdelivr.net/gh/Snownevercy/tarven_helper_template@V0.1/dist/演艺圈_EN/脚本/变量结构/index.js'
+          'https://testingcf.jsdelivr.net/gh/Snownevercy/tarven_helper_template@V1.1/dist/演艺圈_EN/脚本/变量结构/index.js'
 
       - 名称: 状态栏_档案
         id: 5f99297d-c54a-4232-a25b-95b3a6e3620f
         启用: true
         类型: 脚本
         内容: import
-          'http://localhost:5500/dist/演艺圈_EN/脚本/状态栏_档案/index.js'
+          'https://testingcf.jsdelivr.net/gh/Snownevercy/tarven_helper_template@V1.1/dist/演艺圈_EN/脚本/状态栏_档案/index.js'
         介绍: import
           'http://localhost:5500/dist/演艺圈_EN/脚本/状态栏_档案/index.js'
 
