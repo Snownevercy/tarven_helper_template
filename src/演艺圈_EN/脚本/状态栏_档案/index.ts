@@ -77,7 +77,9 @@ function buildAssetAbsoluteUrl(relative: string): string {
 }
 
 function normalizeAvatarName(v: string): string {
-  return String(v ?? '').trim().replace(/\s+/g, '');
+  return String(v ?? '')
+    .trim()
+    .replace(/\s+/g, '');
 }
 
 function extractNameFromAvatarFileName(fileName: string): string {
@@ -2804,9 +2806,7 @@ function renderNetworkTab(sd: SchemaData): string {
     .join('');
   const mapTagsHtml =
     Array.isArray(circles) && circles.length > 0 && circles[0] !== '无'
-      ? circles
-          .map(c => `<span class="map-tag">${escapeHtmlText(c)}</span>`)
-          .join('')
+      ? circles.map(c => `<span class="map-tag">${escapeHtmlText(c)}</span>`).join('')
       : '<span class="map-tag" style="opacity:0.7;">无</span>';
 
   return `
@@ -3281,10 +3281,7 @@ function initArchiveStatus(): void {
       avatarPreviewState.index = ((avatarPreviewState.index % total) + total) % total;
     }
     const currentUrl = avatarPreviewState.urls[avatarPreviewState.index] || DEFAULT_RELATION_AVATAR_URL;
-    $modal
-      .find('#avatar-preview-image')
-      .attr('src', currentUrl)
-      .attr('alt', `${avatarPreviewState.name} 的头像预览`);
+    $modal.find('#avatar-preview-image').attr('src', currentUrl).attr('alt', `${avatarPreviewState.name} 的头像预览`);
     $modal.find('#avatar-preview-name').text(`${avatarPreviewState.name}`);
     $modal.find('#avatar-preview-counter').text(`${avatarPreviewState.index + 1} / ${avatarPreviewState.urls.length}`);
 
