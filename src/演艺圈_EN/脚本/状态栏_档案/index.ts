@@ -32,6 +32,116 @@ const EVENTS_NS = 'archiveStatus';
 const STORAGE_TAB_KEY = 'archive_status_tab_v1';
 const STORAGE_COLLAPSE_KEY = 'archive_status_collapsed_v1';
 
+interface WebpackRequireContext {
+  (id: string): unknown;
+  keys(): string[];
+}
+
+// 由 webpack 注入的 require（浏览器运行时一定存在）
+declare const require: {
+  context(directory: string, useSubdirectories?: boolean, regExp?: RegExp): WebpackRequireContext;
+};
+
+const DEFAULT_RELATION_AVATAR_URL = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+    <rect width="320" height="320" fill="#D9DDE7"/>
+    <circle cx="160" cy="120" r="56" fill="#B2B9C9"/>
+    <rect x="72" y="196" width="176" height="96" rx="48" fill="#B2B9C9"/>
+  </svg>`,
+)}`;
+
+type RelationAvatarSeriesMap = Record<string, Array<{ fileName: string; url: string }>>;
+
+function buildAssetAbsoluteUrl(relative: string): string {
+  const raw = String(relative || '').trim();
+  if (!raw) return DEFAULT_RELATION_AVATAR_URL;
+  // 已经是绝对或 data: URL 的情况，直接返回
+  if (/^(?:[a-z]+:)?\/\//i.test(raw) || raw.startsWith('data:')) return raw;
+  try {
+    if (typeof document === 'undefined') return raw;
+    // 优先使用当前正在执行的脚本
+    let script = document.currentScript as HTMLScriptElement | null;
+    if (!script) {
+      const scripts = Array.from(document.getElementsByTagName('script')) as HTMLScriptElement[];
+      script = scripts.find(s => s.src.includes('状态栏_档案/index.js')) ?? null;
+    }
+    if (!script?.src) return raw;
+    const baseUrl = new URL(script.src, window.location.href);
+    // 去掉文件名，得到脚本所在目录
+    baseUrl.pathname = baseUrl.pathname.replace(/[^/]+$/, '');
+    const resolved = new URL(raw.replace(/^\.\//, ''), baseUrl);
+    return resolved.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function normalizeAvatarName(v: string): string {
+  return String(v ?? '').trim().replace(/\s+/g, '');
+}
+
+function extractNameFromAvatarFileName(fileName: string): string {
+  const pureName = String(fileName).replace(/\.[^.]+$/, '');
+  const normalized = pureName.trim();
+  if (!normalized) return '';
+
+  // 主规则：人名_01.png / 人名_02.png
+  const primarySplit = normalized.match(/^(.+?)_(\d+)$/);
+  if (primarySplit?.[1]) return normalizeAvatarName(primarySplit[1]);
+
+  // 支持类似：宁浩__01、宁浩--02、宁浩@@情绪A、宁浩_1、宁浩-2
+  const strongSplit = normalized.match(/^(.+?)(?:__|@@|--|｜|\|)(.+)$/);
+  if (strongSplit?.[1]) return normalizeAvatarName(strongSplit[1]);
+
+  const weakSplit = normalized.match(/^(.+?)[_\-\s]+(?:\d+|[A-Za-z]\d*|立绘\d*|头像\d*|表情\d*)$/);
+  if (weakSplit?.[1]) return normalizeAvatarName(weakSplit[1]);
+
+  const bracketSplit = normalized.match(/^(.+?)[（(][^)）]+[)）]$/);
+  if (bracketSplit?.[1]) return normalizeAvatarName(bracketSplit[1]);
+
+  return normalizeAvatarName(normalized);
+}
+
+function loadRelationAvatarSeriesMap(): RelationAvatarSeriesMap {
+  const map: RelationAvatarSeriesMap = {};
+  try {
+    const req = require.context('./touxiang', false, /\.(png|jpe?g|webp|gif|avif|svg)$/i);
+    const keys = req.keys();
+    for (const key of keys) {
+      const fileName = String(key).replace(/^\.\//, '');
+      const name = extractNameFromAvatarFileName(fileName);
+      if (!name) continue;
+      const url = buildAssetAbsoluteUrl(String(req(key)));
+      if (!map[name]) map[name] = [];
+      map[name].push({ fileName, url });
+    }
+    for (const name of Object.keys(map)) {
+      map[name].sort((a, b) => a.fileName.localeCompare(b.fileName, 'zh-Hans-CN', { numeric: true }));
+    }
+  } catch (e) {
+    console.warn('[archive-status] 头像目录加载失败，使用默认头像。', e);
+  }
+
+  return map;
+}
+
+const RELATION_AVATAR_SERIES_MAP = loadRelationAvatarSeriesMap();
+
+function getRelationAvatarSeriesByName(name: string): string[] {
+  const normalized = normalizeAvatarName(name);
+  const exact = RELATION_AVATAR_SERIES_MAP[normalized];
+  if (exact?.length) return exact.map(i => i.url);
+  return [DEFAULT_RELATION_AVATAR_URL];
+}
+
+function escapeHtmlText(v: unknown): string {
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeHtmlAttr(v: unknown): string {
+  return escapeHtmlText(v).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ===== 主题设置：脚本变量 + 统一 CSS 变量 =====
 
 const FONT_SIZE_TIER_OPTIONS = ['xsmall', 'small', 'medium', 'large', 'xlarge'] as const;
@@ -1306,7 +1416,34 @@ const ARCHIVE_STATUS_STYLES = `
   #archive-status-root .relationship-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  #archive-status-root .relationship-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  #archive-status-root .relationship-avatar-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid var(--archive-border, rgba(0,0,0,0.12));
+    background: transparent;
+    border-radius: 9999px;
+    padding: 0;
+    cursor: zoom-in;
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+
+  #archive-status-root .relationship-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
   #archive-status-root .relationship-name-box {
@@ -1707,6 +1844,109 @@ const ARCHIVE_STATUS_STYLES = `
 
   #project-modal .btn-modal-secondary:hover {
     background: var(--archive-modal-secondary-hover, #4b5563);
+  }
+
+  #avatar-preview-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--archive-modal-overlay, rgba(0,0,0,0.7));
+    z-index: 10001;
+    padding: 1rem;
+  }
+
+  #avatar-preview-modal.show {
+    display: flex;
+  }
+
+  #avatar-preview-modal .avatar-preview-content {
+    max-width: min(560px, 92vw);
+    width: min(560px, 92vw);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  #avatar-preview-modal .avatar-preview-image {
+    max-width: 100%;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+    border-radius: 0.75rem;
+    border: 1px solid var(--archive-modal-border, rgba(255,255,255,0.1));
+    background: var(--archive-modal-bg, #1f2937);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    display: block;
+  }
+
+  #avatar-preview-modal .avatar-preview-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  #avatar-preview-modal .avatar-preview-left,
+  #avatar-preview-modal .avatar-preview-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  #avatar-preview-modal .avatar-preview-btn {
+    border: 1px solid var(--archive-modal-border, rgba(255,255,255,0.1));
+    background: var(--archive-modal-bg, #1f2937);
+    color: var(--archive-modal-fg, #e5e7eb);
+    border-radius: 9999px;
+    padding: 0.25rem 0.7rem;
+    cursor: pointer;
+    font-size: var(--archive-font-size-label, 0.875rem);
+  }
+
+  #avatar-preview-modal .avatar-preview-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  #avatar-preview-modal .avatar-preview-counter {
+    color: var(--archive-modal-fg, #e5e7eb);
+    font-size: var(--archive-font-size-label, 0.875rem);
+    white-space: nowrap;
+  }
+
+  #avatar-preview-modal .avatar-preview-name {
+    color: var(--archive-modal-fg, #e5e7eb);
+    font-size: var(--archive-font-size-label, 0.875rem);
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 12rem;
+  }
+
+  /* 手机端：头像预览适配小屏，按钮始终可见 */
+  @media (max-width: 768px) {
+    #avatar-preview-modal {
+      align-items: flex-start;
+      justify-content: center;
+      padding: 0.75rem 0.5rem;
+    }
+    #avatar-preview-modal .avatar-preview-content {
+      width: 100%;
+      max-width: 100%;
+      gap: 0.4rem;
+    }
+    #avatar-preview-modal .avatar-preview-image {
+      max-height: 60vh;
+    }
+    #avatar-preview-modal .avatar-preview-toolbar {
+      padding: 0 0.25rem;
+    }
+    #avatar-preview-modal .avatar-preview-name {
+      max-width: 8rem;
+    }
   }
 
   /* 手机端：遮罩全屏；内容区顶部对齐、可滚动，避免居中时上半部分被裁到屏外 */
@@ -2529,13 +2769,30 @@ function renderNetworkTab(sd: SchemaData): string {
       const indicatorClass = r.v < -30 ? 'indicator-high' : r.v <= 30 ? 'indicator-mid' : 'indicator-low';
       const scoreClass = r.v < -30 ? 'score-low' : r.v <= 30 ? 'score-mid' : 'score-high';
       const roleLabel = r.v > 30 ? '核心盟友' : r.v < -30 ? '潜在敌对' : '关系网成员';
+      const safeName = escapeHtmlText(r.name);
+      const avatarSeriesRaw = getRelationAvatarSeriesByName(r.name);
+      const avatarSeries = avatarSeriesRaw.map(u => buildAssetAbsoluteUrl(u));
+      const avatarUrl = avatarSeries[0] || DEFAULT_RELATION_AVATAR_URL;
+      const encodedAvatarSeries = encodeURIComponent(JSON.stringify(avatarSeries));
       return `
         <div class="relationship-card">
           <div class="relationship-indicator ${indicatorClass}"></div>
           <div class="relationship-header">
-            <div class="relationship-name-box">
-              <div class="relationship-name">${String(r.name).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-              <div class="relationship-role">${roleLabel}</div>
+            <div class="relationship-main">
+              <button
+                type="button"
+                class="relationship-avatar-button"
+                data-avatar-url="${escapeHtmlAttr(avatarUrl)}"
+                data-avatar-series="${escapeHtmlAttr(encodedAvatarSeries)}"
+                data-avatar-name="${escapeHtmlAttr(r.name)}"
+                title="点击查看大图"
+              >
+                <img class="relationship-avatar" src="${escapeHtmlAttr(avatarUrl)}" alt="${safeName}" loading="lazy" />
+              </button>
+              <div class="relationship-name-box">
+                <div class="relationship-name">${safeName}</div>
+                <div class="relationship-role">${roleLabel}</div>
+              </div>
             </div>
             <div class="relationship-score-box">
               <div class="score-label">好感度</div>
@@ -2548,7 +2805,7 @@ function renderNetworkTab(sd: SchemaData): string {
   const mapTagsHtml =
     Array.isArray(circles) && circles.length > 0 && circles[0] !== '无'
       ? circles
-          .map(c => `<span class="map-tag">${String(c).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`)
+          .map(c => `<span class="map-tag">${escapeHtmlText(c)}</span>`)
           .join('')
       : '<span class="map-tag" style="opacity:0.7;">无</span>';
 
@@ -2799,6 +3056,25 @@ const MODAL_HTML = `
   </div>
 `;
 
+const AVATAR_PREVIEW_MODAL_HTML = `
+  <div id="avatar-preview-modal">
+    <div class="avatar-preview-content">
+      <div class="avatar-preview-toolbar">
+        <div class="avatar-preview-left">
+          <button type="button" id="avatar-preview-prev" class="avatar-preview-btn">上一张</button>
+          <button type="button" id="avatar-preview-next" class="avatar-preview-btn">下一张</button>
+          <span id="avatar-preview-counter" class="avatar-preview-counter">1 / 1</span>
+        </div>
+        <div class="avatar-preview-right">
+          <span id="avatar-preview-name" class="avatar-preview-name">头像预览</span>
+          <button type="button" id="avatar-preview-close" class="avatar-preview-btn">关闭</button>
+        </div>
+      </div>
+      <img id="avatar-preview-image" class="avatar-preview-image" src="" alt="头像预览" />
+    </div>
+  </div>
+`;
+
 function nextRevenueSourceId(sources: Record<string, unknown>): string {
   const ids = Object.keys(sources).filter(k => /^id_\d+$/.test(k));
   const max = ids.reduce((m, k) => Math.max(m, parseInt(k.replace(/^id_/, ''), 10) || 0), 0);
@@ -2838,7 +3114,7 @@ function renderArchive(): void {
 
 function initArchiveStatus(): void {
   // 清理旧实例
-  $('#archive-status-root, #archive-status-css, #archive-status-theme, #project-modal').remove();
+  $('#archive-status-root, #archive-status-css, #archive-status-theme, #project-modal, #avatar-preview-modal').remove();
   $(document).off(`.${EVENTS_NS}`);
   $(window).off(`.${EVENTS_NS}`);
 
@@ -2846,6 +3122,7 @@ function initArchiveStatus(): void {
   $('head').append(ARCHIVE_STATUS_STYLES);
   $('body').append(ARCHIVE_STATUS_TEMPLATE);
   $('body').append(MODAL_HTML);
+  $('body').append(AVATAR_PREVIEW_MODAL_HTML);
 
   const container = $('#archive-status-root');
   const toggle = $('#archive-status-toggle');
@@ -2978,6 +3255,66 @@ function initArchiveStatus(): void {
 
   const closeProjectModal = () => {
     $('#project-modal').removeClass('show');
+  };
+
+  const getAvatarPreviewModal = () => {
+    const $localModal = $('#avatar-preview-modal');
+    if ($localModal.length > 0) return $localModal;
+    return $(window.parent.document).find('#avatar-preview-modal');
+  };
+
+  const avatarPreviewState: { urls: string[]; index: number; name: string } = {
+    urls: [DEFAULT_RELATION_AVATAR_URL],
+    index: 0,
+    name: '角色',
+  };
+
+  const isAvatarPreviewOpen = () => getAvatarPreviewModal().hasClass('show');
+
+  const syncAvatarPreviewModal = () => {
+    const $modal = getAvatarPreviewModal();
+    const total = avatarPreviewState.urls.length;
+    if (total <= 0) {
+      avatarPreviewState.urls = [DEFAULT_RELATION_AVATAR_URL];
+      avatarPreviewState.index = 0;
+    } else {
+      avatarPreviewState.index = ((avatarPreviewState.index % total) + total) % total;
+    }
+    const currentUrl = avatarPreviewState.urls[avatarPreviewState.index] || DEFAULT_RELATION_AVATAR_URL;
+    $modal
+      .find('#avatar-preview-image')
+      .attr('src', currentUrl)
+      .attr('alt', `${avatarPreviewState.name} 的头像预览`);
+    $modal.find('#avatar-preview-name').text(`${avatarPreviewState.name}`);
+    $modal.find('#avatar-preview-counter').text(`${avatarPreviewState.index + 1} / ${avatarPreviewState.urls.length}`);
+
+    const disableSwitch = avatarPreviewState.urls.length <= 1;
+    $modal.find('#avatar-preview-prev').prop('disabled', disableSwitch);
+    $modal.find('#avatar-preview-next').prop('disabled', disableSwitch);
+  };
+
+  const openAvatarPreviewModal = (avatarUrls: string[], avatarName: string, startIndex = 0) => {
+    const normalizedList =
+      Array.isArray(avatarUrls) && avatarUrls.length > 0
+        ? avatarUrls.map(v => String(v || '').trim()).filter(Boolean)
+        : [DEFAULT_RELATION_AVATAR_URL];
+    avatarPreviewState.urls = normalizedList.length > 0 ? normalizedList : [DEFAULT_RELATION_AVATAR_URL];
+    avatarPreviewState.index = Number.isFinite(startIndex) ? Math.floor(startIndex) : 0;
+    avatarPreviewState.name = String(avatarName || '角色');
+    syncAvatarPreviewModal();
+    const $modal = getAvatarPreviewModal();
+    $modal.addClass('show');
+  };
+
+  const switchAvatarPreview = (step: number) => {
+    if (!isAvatarPreviewOpen()) return;
+    if (avatarPreviewState.urls.length <= 1) return;
+    avatarPreviewState.index += step;
+    syncAvatarPreviewModal();
+  };
+
+  const closeAvatarPreviewModal = () => {
+    getAvatarPreviewModal().removeClass('show');
   };
 
   const saveProject = async () => {
@@ -3220,6 +3557,25 @@ function initArchiveStatus(): void {
     $(this).text(visible ? '▼ 查看明细' : '▲ 收起明细');
   });
 
+  container.on(`click.${EVENTS_NS}`, '.relationship-avatar-button', function (e) {
+    e.stopPropagation();
+    const $btn = $(this);
+    const avatarUrl = String($btn.attr('data-avatar-url') || DEFAULT_RELATION_AVATAR_URL);
+    let avatarSeries = [avatarUrl];
+    try {
+      const raw = String($btn.attr('data-avatar-series') || '');
+      const parsed = raw ? JSON.parse(decodeURIComponent(raw)) : [];
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.map(v => String(v || '').trim()).filter(Boolean);
+        if (cleaned.length > 0) avatarSeries = cleaned;
+      }
+    } catch {
+      avatarSeries = [avatarUrl];
+    }
+    const avatarName = String($btn.attr('data-avatar-name') || '角色');
+    openAvatarPreviewModal(avatarSeries, avatarName, 0);
+  });
+
   // 模态框：绑定在父页 document 上，保证脚本 iframe 中也能操作
   const $parentDoc = $(window.parent.document);
   $parentDoc.on(`click.${EVENTS_NS}`, '#modal-cancel, #project-modal', function (e) {
@@ -3233,6 +3589,60 @@ function initArchiveStatus(): void {
     if (e.key === 'Enter') {
       e.preventDefault();
       saveProject();
+    }
+  });
+  $parentDoc.on(`click.${EVENTS_NS}`, '#avatar-preview-modal', function (e) {
+    if (e.target === this) {
+      closeAvatarPreviewModal();
+    }
+  });
+  $(document).on(`click.${EVENTS_NS}`, '#avatar-preview-modal', function (e) {
+    if (e.target === this) {
+      closeAvatarPreviewModal();
+    }
+  });
+  $parentDoc.on(`click.${EVENTS_NS}`, '#avatar-preview-close', e => {
+    e.stopPropagation();
+    closeAvatarPreviewModal();
+  });
+  $(document).on(`click.${EVENTS_NS}`, '#avatar-preview-close', e => {
+    e.stopPropagation();
+    closeAvatarPreviewModal();
+  });
+  $parentDoc.on(`click.${EVENTS_NS}`, '#avatar-preview-prev', e => {
+    e.stopPropagation();
+    switchAvatarPreview(-1);
+  });
+  $parentDoc.on(`click.${EVENTS_NS}`, '#avatar-preview-next', e => {
+    e.stopPropagation();
+    switchAvatarPreview(1);
+  });
+  $(document).on(`click.${EVENTS_NS}`, '#avatar-preview-prev', e => {
+    e.stopPropagation();
+    switchAvatarPreview(-1);
+  });
+  $(document).on(`click.${EVENTS_NS}`, '#avatar-preview-next', e => {
+    e.stopPropagation();
+    switchAvatarPreview(1);
+  });
+  $parentDoc.on(`keydown.${EVENTS_NS}`, e => {
+    if (!isAvatarPreviewOpen()) return;
+    if (e.key === 'Escape') {
+      closeAvatarPreviewModal();
+    } else if (e.key === 'ArrowLeft') {
+      switchAvatarPreview(-1);
+    } else if (e.key === 'ArrowRight') {
+      switchAvatarPreview(1);
+    }
+  });
+  $(document).on(`keydown.${EVENTS_NS}`, e => {
+    if (!isAvatarPreviewOpen()) return;
+    if (e.key === 'Escape') {
+      closeAvatarPreviewModal();
+    } else if (e.key === 'ArrowLeft') {
+      switchAvatarPreview(-1);
+    } else if (e.key === 'ArrowRight') {
+      switchAvatarPreview(1);
     }
   });
 
@@ -3354,7 +3764,7 @@ $(window).on('pagehide', () => {
     clearTimeout(updateTimer);
     updateTimer = null;
   }
-  $('#archive-status-root, #archive-status-css, #archive-status-theme, #project-modal').remove();
+  $('#archive-status-root, #archive-status-css, #archive-status-theme, #project-modal, #avatar-preview-modal').remove();
   $(document).off(`.${EVENTS_NS}`);
   $(window.parent.document).off(`.${EVENTS_NS}`);
 });

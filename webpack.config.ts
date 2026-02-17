@@ -211,7 +211,8 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
       chunkFilename: `${script_filepath.name}.[contenthash].chunk.js`,
       asyncChunks: true,
       clean: true,
-      publicPath: '',
+      // 让 webpack 根据当前加载的脚本 URL 自动推导资源基础路径
+      publicPath: 'auto',
       library: {
         type: 'module',
       },
@@ -336,6 +337,11 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
             {
               test: /\.ya?ml$/,
               loader: 'yaml-loader',
+            },
+            {
+              test: /\.(png|jpe?g|gif|webp|avif|svg)$/i,
+              type: 'asset/resource',
+              exclude: /node_modules/,
             },
           ].concat(
             entry.html === undefined
