@@ -144,6 +144,36 @@ function escapeHtmlAttr(v: unknown): string {
   return escapeHtmlText(v).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+const ARCHIVE_RELATIONSHIP_AVATAR_INDEX_KEY = 'archive_relationship_avatar_index';
+
+function getSavedAvatarIndex(name: string): number {
+  try {
+    const vars = getVariables({ type: 'script', script_id: getScriptId() });
+    const map = _.get(vars, ARCHIVE_RELATIONSHIP_AVATAR_INDEX_KEY, {}) as Record<string, number>;
+    if (map && typeof map === 'object') {
+      const idx = map[normalizeAvatarName(name)];
+      if (typeof idx === 'number' && Number.isInteger(idx) && idx >= 0) return idx;
+    }
+  } catch {
+    // ignore
+  }
+  return 0;
+}
+
+function saveAvatarSelection(name: string, index: number): void {
+  try {
+    const vars = getVariables({ type: 'script', script_id: getScriptId() });
+    const map = (_.get(vars, ARCHIVE_RELATIONSHIP_AVATAR_INDEX_KEY, {}) as Record<string, number>) || {};
+    const next = { ...map, [normalizeAvatarName(name)]: index };
+    insertOrAssignVariables(
+      { [ARCHIVE_RELATIONSHIP_AVATAR_INDEX_KEY]: next },
+      { type: 'script', script_id: getScriptId() },
+    );
+  } catch (e) {
+    console.warn('[archive-status] 保存头像选择失败', e);
+  }
+}
+
 // ===== 主题设置：脚本变量 + 统一 CSS 变量 =====
 
 const FONT_SIZE_TIER_OPTIONS = ['xsmall', 'small', 'medium', 'large', 'xlarge'] as const;
@@ -1907,6 +1937,10 @@ const ARCHIVE_STATUS_STYLES = `
     font-size: var(--archive-font-size-label, 0.875rem);
   }
 
+  #avatar-preview-modal .avatar-preview-btn-primary {
+    background: var(--archive-status-accent, #4a9eff);
+    color: #fff;
+  }
   #avatar-preview-modal .avatar-preview-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -2774,7 +2808,9 @@ function renderNetworkTab(sd: SchemaData): string {
       const safeName = escapeHtmlText(r.name);
       const avatarSeriesRaw = getRelationAvatarSeriesByName(r.name);
       const avatarSeries = avatarSeriesRaw.map(u => buildAssetAbsoluteUrl(u));
-      const avatarUrl = avatarSeries[0] || DEFAULT_RELATION_AVATAR_URL;
+      const savedIndex = getSavedAvatarIndex(r.name);
+      const safeIndex = Math.min(Math.max(0, savedIndex), Math.max(0, avatarSeries.length - 1));
+      const avatarUrl = avatarSeries[safeIndex] || avatarSeries[0] || DEFAULT_RELATION_AVATAR_URL;
       const encodedAvatarSeries = encodeURIComponent(JSON.stringify(avatarSeries));
       return `
         <div class="relationship-card">
@@ -3067,6 +3103,7 @@ const AVATAR_PREVIEW_MODAL_HTML = `
         </div>
         <div class="avatar-preview-right">
           <span id="avatar-preview-name" class="avatar-preview-name">头像预览</span>
+          <button type="button" id="avatar-preview-save" class="avatar-preview-btn avatar-preview-btn-primary">保存为当前头像</button>
           <button type="button" id="avatar-preview-close" class="avatar-preview-btn">关闭</button>
         </div>
       </div>
@@ -3570,7 +3607,7 @@ function initArchiveStatus(): void {
       avatarSeries = [avatarUrl];
     }
     const avatarName = String($btn.attr('data-avatar-name') || '角色');
-    openAvatarPreviewModal(avatarSeries, avatarName, 0);
+    openAvatarPreviewModal(avatarSeries, avatarName, getSavedAvatarIndex(avatarName));
   });
 
   // 模态框：绑定在父页 document 上，保证脚本 iframe 中也能操作
@@ -3605,6 +3642,22 @@ function initArchiveStatus(): void {
   $(document).on(`click.${EVENTS_NS}`, '#avatar-preview-close', e => {
     e.stopPropagation();
     closeAvatarPreviewModal();
+  });
+  $parentDoc.on(`click.${EVENTS_NS}`, '#avatar-preview-save', e => {
+    e.stopPropagation();
+    if (avatarPreviewState.name != null && avatarPreviewState.index != null) {
+      saveAvatarSelection(avatarPreviewState.name, avatarPreviewState.index);
+      closeAvatarPreviewModal();
+      renderArchive();
+    }
+  });
+  $(document).on(`click.${EVENTS_NS}`, '#avatar-preview-save', e => {
+    e.stopPropagation();
+    if (avatarPreviewState.name != null && avatarPreviewState.index != null) {
+      saveAvatarSelection(avatarPreviewState.name, avatarPreviewState.index);
+      closeAvatarPreviewModal();
+      renderArchive();
+    }
   });
   $parentDoc.on(`click.${EVENTS_NS}`, '#avatar-preview-prev', e => {
     e.stopPropagation();
