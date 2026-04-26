@@ -1,0 +1,64 @@
+ChinaMainland2003:
+  location: 中国大陆 (China Mainland)
+  era: 2003年 (非典危机与神舟飞天)
+  introduction:
+    title: 口罩下的静默与太空中的腾飞
+    summary: >-
+      2003年是极具戏剧性的一年，SARS疫情的爆发让社会陷入短暂的恐慌与停摆，但随后的神舟五号载人航天成功又极大地提振了民族自信。影视行业在此年迎来巨变，CEPA协议的签署彻底打开了香港与内地合拍片的大门，促使产业格局迅速向商业化和融合化转型。
+  
+  timelineOfKeyEvents:
+    "2003-04-20": >-
+      卫生部正式公布非典型肺炎（SARS）疫情实情，国务院随后取消五一长假并实行严格的隔离措施，这一公共卫生危机导致全国城市陷入空前的静默，极大地改变了公众的卫生习惯与政府的信息公开机制。 
+    "2003-06-20": >-
+      针对大学生孙志刚在收容遣送站死亡一案，国务院颁布新规废止了《城市流浪乞讨人员收容遣送办法》，这一标志性事件被视为中国法治进程与人权保障的重要里程碑，体现了舆论监督的力量。
+    "2003-06-29": >-
+      《内地与香港关于建立更紧密经贸关系的安排》（CEPA）正式签署，其中针对影视行业的条款允许香港电影不再受进口配额限制，这一政策直接引爆了“合拍片”热潮，重塑了华语电影的制作生态。
+    "2003-10-15": >-
+      神舟五号载人飞船成功发射，航天员杨利伟成为中国进入太空第一人，这标志着中国成为全球第三个掌握载人航天技术的国家，极大地激发了爱国主义热情和科技自豪感。 
+    "2003-11": >-
+      张艺谋执导的《英雄》在北美公映并夺得票房周冠军，虽然国内关于商业与艺术的争论未休，但其成功的海外输出模式刺激了更多资本涌入影视行业，确立了“大片”作为行业龙头的地位。
+    "2003-12-18": >-
+      冯小刚执导的贺岁片《手机》上映，最终成为年度票房冠军，影片不仅引发了关于婚姻信任与隐私危机的广泛社会讨论，也侧面反映了移动通讯工具在日常生活中的爆发式普及。 
+
+  economicBarometer:
+    currency: 人民币 (CNY)
+    income_annual_pretax:
+      household_median: "~22,000"
+      individual_low: "~6,000"
+      individual_professional: "~42,000"
+    key_assets:
+      housing_urban_median_price: "~4,500/平米 (一线城市)"
+      price_to_income_ratio: "~9.2"
+      new_car_base_model_price: "~100,000 (如别克赛欧)"
+    indicative_prices:
+      global_fast_food_meal: "~10.5"
+      leisure_movie_ticket: "~30"
+      gasoline_liter_or_gallon: "~3.0/升"
+    financial_snapshot:
+      stock_index_name: 上证指数 (Shanghai Composite)
+      era_defining_feature: >-
+        股市延续漫漫熊市，指数在1300点至1600点之间反复拉锯，虽然经济基本面受“非典”影响后强劲反弹，但股市并未同步反映，主要受制于股权分置等制度性问题。
+      benchmark_interest_rate_avg: "5.31% (维持不变)"
+
+  factClusterGlossary:
+    political_events: "抗击非典 | 神舟五号 | 废除收容遣送 | 振兴东北老工业基地 | 胡温新政"
+    key_policies: "CEPA协议 | 土地招拍挂制度 | 农村税费改革试点 | 新闻频道开播"
+    geopolitics: "六方会谈启动 | 伊拉克战争(旁观与评论) | 中欧关系蜜月期"
+    industry_shifts: "院线制改革深化 | 合拍片时代开启 | 民营影视公司崛起 | 报刊治理整顿"
+    iconic_companies: "淘宝网(创立) | 阿里巴巴 | 华谊兄弟 | 中影集团 | 腾讯(QQ秀) | 携程(上市)"
+    financial_market: "QFII第一单 | 五朵金花(蓝筹股) | 熊市煎熬 | 基金黑幕余波"
+    economic_policies: "非典减免税 | 房地产支柱产业地位确立 | 出口退税机制改革"
+    film_and_tv: "手机(电影) | 天地英雄 | 无间道3 | 金粉世家 | 天龙八部(胡军版) | 亮剑(拍摄中)"
+    music: "以父之名(周杰伦) | Super Star(S.H.E) | 看我72变(蔡依林) | 遇见(孙燕姿) | 传奇(李健)"
+    literature_and_publishing: "那小子真帅(韩流文学) | 幻城 | 狼图腾 | 九州幻想(创刊)"
+    fashion_and_style: "口罩时尚 | 彩屏手机挂绳 | 甚至开始流行瑜伽 | 波西米亚风"
+    art_and_thought: "公知言论兴起 | 维权律师群体 | 博客(Blog)元年 | 木子美事件"
+    games_and_recreation: "梦幻西游(公测) | 泡泡堂 | 传奇世界 | 联众游戏"
+    sports_culture: "皇马访华(贝克汉姆) | 姚明NBA新秀赛季 | 末代甲A"
+    disruptive_products: "拍照手机 | 淘宝网 | 支付宝 | 液晶电视(LCD)起步"
+    key_technologies: "红外线测温仪 | 载人航天 | ADSL宽带普及 | 非典疫苗研发"
+    transportation_tools: "私家车爆发增长 | 别克凯越 | 马自达6 | 磁悬浮列车(上海试运行)"
+    lifestyle: "分餐制推广 | 勤洗手 | 网上购物初体验 | 短信拇指一族"
+    iconic_landmarks: "小汤山医院 | 国家大剧院(建设中) | 金茂大厦 | 三峡大坝(蓄水)"
+    social_issues: "非典恐慌 | 孙志刚案 | 板蓝根抢购潮 | 大学生就业难初现"
+    daily_slang: "非典 | 隔离 | 疑似 | 顶(论坛用语) | 楼主 | 灌水 | 审美疲劳"

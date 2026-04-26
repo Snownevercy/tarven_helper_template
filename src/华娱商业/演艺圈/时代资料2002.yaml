@@ -1,0 +1,64 @@
+ChinaMainland2002:
+  location: 中国大陆 (China Mainland)
+  era: 2002年 (千禧年初)
+  introduction:
+    title: 激荡与新生的前奏曲
+    summary: >-
+      2002年是中国加入WTO后的元年，经济引擎全速运转，不仅首次入围世界杯引发全民狂欢，更在十六大完成了关键的领导层平稳交接。演艺圈也在这一年迎来了分水岭：国产电影开启了“大片时代”，而明星税案的爆发则重塑了行业的法治规则。
+  
+  timelineOfKeyEvents:
+    "2002-06-04": >-
+      中国国家男子足球队在韩日世界杯首战对阵哥斯达黎加，虽然最终三战皆负未进一球，但这标志着中国足球的历史性突破，引发了空前的民族自豪感与全民看球热潮。 
+    "2002-06-16": >-
+      北京“蓝极速”网吧发生特大纵火案，造成严重伤亡，导致国家对互联网上网服务营业场所进行长达数月的严厉整顿，网吧实名制与连锁化经营由此开启。
+    "2002-07-24": >-
+      内地演艺圈“大姐大”刘晓庆因涉嫌偷税漏税被正式逮捕，这一标志性事件极大地震撼了野蛮生长的娱乐产业，促使当局对明星纳税体系进行了全面规范与严查。
+    "2002-11-08": >-
+      中国共产党第十六次全国代表大会在北京召开，胡锦涛当选为总书记，完成了中共领导层的平稳交接，确立了“三个代表”重要思想的指导地位，保障了政治与经济政策的连续性。
+    "2002-12-14": >-
+      张艺谋执导的武侠巨制《英雄》在人民大会堂首映，最终斩获2.5亿票房，不仅拯救了低迷的电影市场，更标志着中国电影正式进入高投入、高回报的商业“大片时代”。 
+    "2002-12-16": >-
+      广东河源发现首例不明原因肺炎（后确认为SARS），虽然当时并未引起全国性恐慌，但这颗潜伏的“定时炸弹”为即将到来的2003年卫生危机埋下了伏笔。
+
+  economicBarometer:
+    currency: 人民币 (CNY)
+    income_annual_pretax:
+      household_median: "~18,000"
+      individual_low: "~5,000"
+      individual_professional: "~35,000"
+    key_assets:
+      housing_urban_median_price: "~3,800/平米 (一线城市)"
+      price_to_income_ratio: "~8.5"
+      new_car_base_model_price: "~110,000 (如桑塔纳2000)"
+    indicative_prices:
+      global_fast_food_meal: "~10.5"
+      leisure_movie_ticket: "~25"
+      gasoline_liter_or_gallon: "~2.8/升"
+    financial_snapshot:
+      stock_index_name: 上证指数 (Shanghai Composite)
+      era_defining_feature: >-
+        股市处于漫长的熊市调整期（2001-2005），受国有股减持暂停等政策反复影响，2002年指数在1300-1700点之间震荡下行，投资者信心普遍不足。
+      benchmark_interest_rate_avg: "约 5.31% (一年期贷款利率)"
+
+  factClusterGlossary:
+    political_events: "十六大召开 | 胡温体制启航 | 三个代表 | 申博成功(上海)"
+    key_policies: "西部大开发 | 退耕还林 | 积极财政政策 | 网吧专项整治"
+    geopolitics: "入世(WTO)元年 | 反恐合作 | 中美关系回暖 | 朝核危机发端"
+    industry_shifts: "国企改制攻坚 | 民营经济腾飞 | 房地产市场化起步 | 世界工厂雏形"
+    iconic_companies: "中国移动 | 联想集团 | 海尔 | 万科 | 盛大网络 | 搜狐"
+    financial_market: "漫漫熊市 | 银广夏陷阱 | 基金业起步 | 庄家跳水"
+    economic_policies: "出口退税 | 吸引外资 | 假日经济(黄金周)"
+    film_and_tv: "英雄(电影) | 流星花园(F4) | 激情燃烧的岁月 | 不要和陌生人说话 | 刘晓庆税案 | 无间道(引进)"
+    music: "周杰伦(八度空间) | 刀郎(初现) | 朴树 | 下一站天后 | 盗版CD盛行 | 动感地带"
+    literature_and_publishing: "三重门(韩寒) | 萌芽杂志 | 幻城(郭敬明) | 第一次亲密接触 | 读者 | 故事会"
+    fashion_and_style: "韩流服饰 | 离子烫 | 松糕鞋 | 吊带衫 | 美瞳初现"
+    art_and_thought: "798艺术区雏形 | 愤青文化 | 商业大片争论 | 海归潮"
+    games_and_recreation: "传奇(网游) | CS(反恐精英) | 大话西游2 | 劲舞团前夜 | 疯狂坦克"
+    sports_culture: "韩日世界杯 | 姚明登陆NBA(状元秀) | 假球黑哨风波 | 米卢(快乐足球)"
+    disruptive_products: "彩屏手机 | MP3播放器 | 优盘(U盘) | 宽带ADSL"
+    key_technologies: "短信(SMS)爆发 | 奔腾4处理器 | Windows XP | 局域网吧"
+    transportation_tools: "桑塔纳/捷达/富康(老三样) | 绿皮火车 | 摩托车 | 私家车元年"
+    lifestyle: "网吧通宵 | 短信拜年 | 动感地带 | 肯德基/麦当劳聚会 | 黄金周旅游"
+    iconic_landmarks: "东方明珠 | 北京申奥标志 | 中关村电子城 | 深圳地王大厦"
+    social_issues: "网瘾少年 | 下岗再就业 | 农民工讨薪 | 蓝极速火灾 | 孙志刚案前夜"
+    daily_slang: "MM(美眉) | 886(拜拜咯) | 恐龙/青蛙(网恋用语) | 郁闷 | I服了YOU | 靠 | 大款"

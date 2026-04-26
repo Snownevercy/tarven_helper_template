@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=../../../schema.json
+world:
+  currentDate: 待初始化
+  currentLocation: 待初始化
+  eraNews: 待初始化
+  industryNews: 待初始化
+  gossipNews: 待初始化
+
+protagonist:
+  name: 待初始化
+  $birthday: 待初始化
+  _age: 0
+  appearance: 待初始化
+  occupation: 待初始化
+  kink: 无
+
+career:
+  works: []
+  industryAwards: []
+
+professionalAssessment:
+  currentTier: 待初始化
+  mediaSentiment: 待初始化
+  publicReputation: 待初始化
+  fanbase: 待初始化
+
+personalAccount:
+  monthlyFixedIncome: 0
+  monthlyFixedExpense: 0
+  oneTimePersonalChange: 0
+  contractStatus: 待初始化
+  assets:
+    realEstate: []
+    vehicles: []
+    stocks: []
+  _cash: 0
+
+companyAccount:
+  monthlyRevenueSources: {}
+  monthlyFixedExpenses:
+    payroll: 0
+    facilityCost: 0
+    marketingBudget: 0
+    other: 0
+  oneTimeCompanyChange: 0
+  _cash: 0
+
+network:
+  socialMap: ["无"]
+  recentInteractions: ["无"]
+  relationshipBook: {}
+
+butterflyEffect:
+  erasedList: {}

@@ -1,0 +1,66 @@
+ChinaMainland1999:
+  location: 中国大陆 (Mainland China)
+  era: 1999年
+  introduction:
+    title: 世纪之交的狂欢与阵痛
+    summary: >-
+      1999年是中国迈向新世纪的关键转折点，社会在迎接千禧年的亢奋中夹杂着体制转轨的阵痛。互联网浪潮开启了中国式硅谷的萌芽，而文学界则在传统叙事与网络新兴力量的交锋中寻找新的表达边界。
+
+  timelineOfKeyEvents:
+    "1999-01-01": >-
+      中国政府启动“政府上网工程”，旨在推动行政信息化，此举为互联网在国内的政务应用和普及打下了行政基础。
+    "1999-05-08": >-
+      北约轰炸中国驻南斯拉夫联盟大使馆，引发全国性大规模反美示威，民族主义情绪空前高涨并深刻影响了此后的外交走向。
+    "1999-07": >-
+      教育部出台《面向21世纪教育振兴行动计划》，高校开始大规模扩招，中国高等教育由“精英化”迈向“大众化”阶段。
+    "1999-09-09": >-
+      由于“久”的谐音寓意长久，全国各地迎来建国以来最密集的千禧年结婚潮，带动了婚庆及零售消费的高峰。
+    "1999-11-15": >-
+      中美签署关于中国加入世界贸易组织（WTO）的双边协议，扫清了中国入世的最大障碍，预示着中国将全面融入全球经济体系。
+    "1999-12-20": >-
+      澳门回归祖国，中国正式恢复对澳门行使主权，标志着西方在华殖民历史的终结，提升了民族自豪感。
+    "1999": >-
+      《萌芽》杂志举办首届“新概念作文大赛”，韩寒等少年作家的崛起引发了关于“80后”和文学体制的社会大讨论。
+
+  economicBarometer:
+    currency: 人民币 (CNY)
+    income_annual_pretax:
+      household_median: "~12,000"
+      individual_low: "~3,600"
+      individual_professional: "~25,000"
+    key_assets:
+      housing_urban_median_price: "~2,000/平米"
+      price_to_income_ratio: "~6.5"
+      new_car_base_model_price: "~150,000 (桑塔纳2000/捷达)"
+    indicative_prices:
+      global_fast_food_meal: "~18 (麦当劳超值套餐)"
+      leisure_movie_ticket: "~15-30"
+      gasoline_liter_or_gallon: "~2.3/升"
+    financial_snapshot:
+      stock_index_name: 上证指数 (SSE Composite Index)
+      era_defining_feature: >-
+        年初市场低迷，5月19日受政策利好刺激爆发“5·19行情”，科技网络股领涨，上证指数在短短一个多月内涨幅超过50%，随后进入高位震荡。
+      benchmark_interest_rate_avg: 经历多次降息以刺激内需，一年期存款利率约为2.25%。
+
+  factClusterGlossary:
+    political_events: "澳门回归 | 驻南使馆被炸 | 五八游行 | 庆祝建国50周年阅兵 | 三个代表萌芽"
+    key_policies: "高校扩招 | 住房分配货币化改革 | 黄金周假期制度 | 西部大开发战略"
+    geopolitics: "入世谈判 | 中美关系波折 | 克林顿政府 | 科索沃战争"
+    industry_shifts: "互联网创业潮 | 国企下岗潮 | 零售业连锁化 | 房地产商品化转型"
+    iconic_companies: "阿里巴巴 | 腾讯(OICQ) | 新浪 | 搜狐 | 网易 | 联想 | 海尔"
+    financial_market: "5·19行情 | 网络股泡沫 | 证券投资基金扩容 | 柜台交易清退"
+    economic_policies: "积极的财政政策 | 扩大内需 | 债转股 | 个人住房贷款制度"
+    film_and_tv: "还珠格格第二部 | 喜剧之王 | 没完没了 | 雍正王朝 | 牵手 | 此时此刻"
+    music: "谢谢你的爱1999 | 约定 | 那些花儿 | 朴树 | 羽泉 | 世纪末的音乐"
+    literature_and_publishing: "新概念作文 | 韩寒 | 三重门 | 第一次亲密接触 | 痞子蔡 | 黄金时代(王小波)"
+    fashion_and_style: "厚底松糕鞋 | 染发 | 露脐装 | 呼机套 | 飘逸长裙"
+    art_and_thought: "自由主义与左派论战 | 先锋艺术 | 千禧年末世论与乐观主义并存"
+    games_and_recreation: "星际争霸 | 红色警戒 | 仙剑奇侠传 | 录像厅 | 迪厅 | 电脑游戏室"
+    sports_culture: "中国女足夺世界杯亚军 | 铿锵玫瑰 | 申奥热潮 | 辽超联赛"
+    disruptive_products: "OICQ(QQ) | 数字手机(诺基亚3210) | VCD/DVD影碟机 | 56K拨号上网"
+    key_technologies: "Y2K千年虫修复 | Linux国产化 | 宽带骨干网建设"
+    transportation_tools: "桑塔纳 | 捷达 | 夏利 | 绿皮火车 | 南京路上小火车"
+    lifestyle: "网吧通宵 | 黄金周旅游 | 炒股 | 考研热 | 逛超市"
+    iconic_landmarks: "金茂大厦落成 | 东方明珠 | 天安门广场整修 | 中关村电子城"
+    social_issues: "下岗职工再就业 | 法轮功取缔 | 盗版光盘普及 | 网络沉迷讨论"
+    daily_slang: "美眉 | 菜鸟 | 伊妹儿 | 恐龙 | 走秀 | 给力(萌芽期) | 这里的黎明静悄悄"
