@@ -31,6 +31,7 @@ export function createScriptIdIframe(): JQuery<HTMLIFrameElement> {
   }) as JQuery<HTMLIFrameElement>;
 }
 
+<<<<<<< HEAD
 /** 在指定 document 中创建 iframe（用于挂到主页面 body，脚本 iframe 内可见） */
 export function createScriptIdIframeInDocument(doc: Document): HTMLIFrameElement {
   const iframe = doc.createElement('iframe');
@@ -40,6 +41,8 @@ export function createScriptIdIframeInDocument(doc: Document): HTMLIFrameElement
   return iframe;
 }
 
+=======
+>>>>>>> f1453c36c93c0f091171be522b45a09fe280a2bc
 export function createScriptIdDiv(): JQuery<HTMLDivElement> {
   return $('<div>').attr('script_id', getScriptId()) as JQuery<HTMLDivElement>;
 }

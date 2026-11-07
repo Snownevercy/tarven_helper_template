@@ -1,8 +1,17 @@
+<<<<<<< HEAD
+=======
+import { StoreDefinition } from 'pinia';
+
+>>>>>>> f1453c36c93c0f091171be522b45a09fe280a2bc
 export function defineMvuDataStore<T extends z.ZodObject>(
   schema: T,
   variable_option: VariableOption,
   additional_setup?: (data: Ref<z.infer<T>>) => void,
+<<<<<<< HEAD
 ): ReturnType<typeof defineStore> {
+=======
+): StoreDefinition<`mvu_data.${string}`, { data: Ref<z.infer<T>> }> {
+>>>>>>> f1453c36c93c0f091171be522b45a09fe280a2bc
   if (
     variable_option.type === 'message' &&
     (variable_option.message_id === undefined || variable_option.message_id === 'latest')
@@ -17,7 +26,13 @@ export function defineMvuDataStore<T extends z.ZodObject>(
       .map(entry => entry[1])
       .join('.')}`,
     errorCatched(() => {
+<<<<<<< HEAD
       const data = ref(schema.parse(_.get(getVariables(variable_option), 'stat_data', {}))) as Ref<z.infer<T>>;
+=======
+      const data = ref(
+        schema.parse(_.get(getVariables(variable_option), 'stat_data', {}), { reportInput: true }),
+      ) as Ref<z.infer<T>>;
+>>>>>>> f1453c36c93c0f091171be522b45a09fe280a2bc
       if (additional_setup) {
         additional_setup(data);
       }
@@ -32,10 +47,17 @@ export function defineMvuDataStore<T extends z.ZodObject>(
           ignoreUpdates(() => {
             data.value = result.data;
           });
+<<<<<<< HEAD
         }
         if (!_.isEqual(stat_data, result.data)) {
           updateVariablesWith(variables => _.set(variables, 'stat_data', result.data), variable_option);
         }
+=======
+          if (!_.isEqual(stat_data, result.data)) {
+            updateVariablesWith(variables => _.set(variables, 'stat_data', result.data), variable_option);
+          }
+        }
+>>>>>>> f1453c36c93c0f091171be522b45a09fe280a2bc
       }, 2000);
 
       const { ignoreUpdates } = watchIgnorable(
