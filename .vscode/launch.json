@@ -63,7 +63,11 @@
       "name": "仅调试酒馆网页 (Edge)",
       "type": "msedge",
       "request": "launch",
+<<<<<<< HEAD
       "url": "http://127.0.0.1:8000",
+=======
+      "url": "http://localhost:8000",
+>>>>>>> fbd0c2c5f019bec7ca3a145029527629c529b4b3
       "disableNetworkCache": true,
       "internalConsoleOptions": "neverOpen",
       "cwd": "${workspaceFolder}",
